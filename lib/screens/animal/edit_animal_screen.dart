@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/animal.dart';
+import '../../models/animal.dart';
 
 class EditAnimalScreen extends StatefulWidget {
   final String shelterId;

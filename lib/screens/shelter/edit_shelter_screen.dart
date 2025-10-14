@@ -1,20 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'address_search_screen.dart'; // 주소 검색 화면 import
+import '../../models/shelter.dart';
+import '../search/address_search_screen.dart';
 
-class AddShelterScreen extends StatefulWidget {
-  const AddShelterScreen({super.key});
+class EditShelterScreen extends StatefulWidget {
+  final Shelter shelter;
+  const EditShelterScreen({super.key, required this.shelter});
 
   @override
-  State<AddShelterScreen> createState() => _AddShelterScreenState();
+  State<EditShelterScreen> createState() => _EditShelterScreenState();
 }
 
-class _AddShelterScreenState extends State<AddShelterScreen> {
+class _EditShelterScreenState extends State<EditShelterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _addressController = TextEditingController(); // 주소 컨트롤러
-  String _status = '운영중';
+  late TextEditingController _nameController;
+  late TextEditingController _addressController;
+  late String _status;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.shelter.name);
+    _addressController = TextEditingController(text: widget.shelter.address);
+    _status = widget.shelter.status;
+  }
 
   @override
   void dispose() {
@@ -23,23 +33,25 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
     super.dispose();
   }
 
-  Future<void> _saveShelter() async {
+  Future<void> _updateShelter() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
       });
       try {
-        await FirebaseFirestore.instance.collection('shelters').add({
+        await FirebaseFirestore.instance
+            .collection('shelters')
+            .doc(widget.shelter.id)
+            .update({
           'name': _nameController.text,
           'address': _addressController.text,
           'status': _status,
-          'createdAt': Timestamp.now(),
         });
 
         if (!mounted) return;
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(); // 수정 후 대시보드로 복귀
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('신규 보호소가 등록되었습니다.')),
+          const SnackBar(content: Text('보호소 정보가 성공적으로 수정되었습니다.')),
         );
       } catch (e) {
         if (!mounted) return;
@@ -47,8 +59,6 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
           SnackBar(content: Text('오류가 발생했습니다: $e')),
         );
       } finally {
-        // --- 수정된 부분 ---
-        // return을 사용하지 않고, mounted 상태일 때만 setState를 호출하도록 변경
         if (mounted) {
           setState(() {
             _isLoading = false;
@@ -62,7 +72,7 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('신규 보호소 개설'),
+        title: const Text('보호소 정보 수정'),
         backgroundColor: const Color(0xFFFF7A00),
       ),
       body: Form(
@@ -78,12 +88,8 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
                   labelText: '보호소 이름',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '보호소 이름을 입력해주세요.';
-                  }
-                  return null;
-                },
+                validator: (value) =>
+                value!.isEmpty ? '보호소 이름을 입력해주세요.' : null,
               ),
               const SizedBox(height: 16),
               Row(
@@ -96,26 +102,19 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
                         labelText: '보호소 주소',
                         border: OutlineInputBorder(),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return '보호소 주소를 입력해주세요.';
-                        }
-                        return null;
-                      },
-                      maxLines: 2, // 주소가 길 수 있으므로 2줄로 설정
+                      validator: (value) =>
+                      value!.isEmpty ? '보호소 주소를 입력해주세요.' : null,
+                      maxLines: 2,
                     ),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: () async {
-                      // 주소 검색 화면으로 이동하고 결과를 받음
                       final result = await Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) => const AddressSearchScreen(),
                         ),
                       );
-
-                      // 결과가 있으면 주소 컨트롤러에 값 설정
                       if (result != null && result is String) {
                         setState(() {
                           _addressController.text = result;
@@ -151,7 +150,7 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: _isLoading ? null : _saveShelter,
+                onPressed: _isLoading ? null : _updateShelter,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFF7A00),
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -161,7 +160,7 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 )
                     : const Text(
-                  '등록하기',
+                  '수정 완료',
                   style: TextStyle(fontSize: 18, color: Colors.white),
                 ),
               ),

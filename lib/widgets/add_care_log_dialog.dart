@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 
 class AddCareLogDialog extends StatefulWidget {
   final String shelterId;
@@ -23,6 +25,9 @@ class _AddCareLogDialogState extends State<AddCareLogDialog> {
   final _exerciseController = TextEditingController();
   bool _isLoading = false;
 
+  // 날짜 관리를 위한 변수
+  DateTime _selectedDate = DateTime.now();
+
   @override
   void dispose() {
     _amMealController.dispose();
@@ -32,11 +37,30 @@ class _AddCareLogDialogState extends State<AddCareLogDialog> {
     super.dispose();
   }
 
+  // 날짜 선택 팝업(DatePicker)을 띄우는 함수
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(), // 오늘 이후 날짜는 선택 불가
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
   Future<void> _saveLog() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
       });
+
+      // 현재 로그인한 사용자의 이메일 가져오기
+      final userEmail =
+          FirebaseAuth.instance.currentUser?.email ?? '알 수 없는 사용자';
 
       try {
         await FirebaseFirestore.instance
@@ -46,16 +70,16 @@ class _AddCareLogDialogState extends State<AddCareLogDialog> {
             .doc(widget.animalId)
             .collection('careLogs')
             .add({
-          'date': Timestamp.now(),
+          'date': Timestamp.fromDate(_selectedDate), // 선택된 날짜로 저장
           'amMeal': _amMealController.text,
           'pmMeal': _pmMealController.text,
           'water': _waterController.text,
           'exercise': _exerciseController.text,
-          'recordedBy': '', // 추후 기록자 정보 추가
+          'recordedByEmail': userEmail, // 현재 사용자 이메일 저장
         });
 
         if (mounted) {
-          Navigator.of(context).pop(); // 성공 시 팝업 닫기
+          Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('케어 기록이 추가되었습니다.')),
           );
@@ -86,6 +110,23 @@ class _AddCareLogDialogState extends State<AddCareLogDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // 날짜 선택 UI
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '기록 날짜: ${DateFormat('yyyy-MM-dd').format(_selectedDate)}',
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.calendar_today),
+                    onPressed: () => _selectDate(context),
+                    tooltip: '날짜 선택',
+                  ),
+                ],
+              ),
+              const Divider(),
               TextFormField(
                 controller: _amMealController,
                 decoration: const InputDecoration(labelText: '오전 배식'),

@@ -7,7 +7,7 @@ class CareLog {
   final String pmMeal; // 오후 배식
   final String water; // 급수
   final String exercise; // 운동
-  final String recordedBy; // 기록한 직원 ID (나중에 추가)
+  final String recordedByEmail; // 기록한 직원 이메일
 
   CareLog({
     required this.id,
@@ -16,7 +16,7 @@ class CareLog {
     required this.pmMeal,
     required this.water,
     required this.exercise,
-    required this.recordedBy,
+    required this.recordedByEmail,
   });
 
   factory CareLog.fromFirestore(DocumentSnapshot doc) {
@@ -28,7 +28,7 @@ class CareLog {
       pmMeal: data['pmMeal'] ?? '',
       water: data['water'] ?? '',
       exercise: data['exercise'] ?? '',
-      recordedBy: data['recordedBy'] ?? '',
+      recordedByEmail: data['recordedByEmail'] ?? '알 수 없음',
     );
   }
 }

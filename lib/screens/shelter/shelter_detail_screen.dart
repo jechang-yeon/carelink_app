@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/shelter.dart';
-import '../models/animal.dart';
-import 'add_animal_screen.dart';
+import '../../models/shelter.dart';
+import '../../models/animal.dart';
+import '../animal/add_animal_screen.dart';
 
 class ShelterDetailScreen extends StatelessWidget {
   final Shelter shelter;

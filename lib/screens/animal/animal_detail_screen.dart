@@ -2,10 +2,11 @@ import 'package:carelink_app/widgets/delete_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart'; // url_launcher import
-import '../models/animal.dart';
-import '../models/care_log.dart';
-import '../widgets/add_care_log_dialog.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../models/animal.dart';
+import '../../models/care_log.dart';
+import '../../widgets/add_care_log_dialog.dart';
 import 'edit_animal_screen.dart';
 
 class AnimalDetailScreen extends StatelessWidget {
@@ -23,7 +24,7 @@ class AnimalDetailScreen extends StatelessWidget {
           .doc(animal.id)
           .delete();
       if (!context.mounted) return;
-      Navigator.of(context).pop(); // 상세 화면 닫기
+      Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${animal.name} 정보가 삭제되었습니다.')),
       );
@@ -35,7 +36,6 @@ class AnimalDetailScreen extends StatelessWidget {
     }
   }
 
-  // --- 수정된 함수: 보호자에게 알림 전송 ---
   Future<void> _sendCareUpdateToOwner(BuildContext context) async {
     final logSnapshot = await FirebaseFirestore.instance
         .collection('shelters')
@@ -58,16 +58,14 @@ class AnimalDetailScreen extends StatelessWidget {
     final latestLog = CareLog.fromFirestore(logSnapshot.docs.first);
     final formattedDate =
     DateFormat('yyyy-MM-dd').format(latestLog.date.toDate());
-    // --- 경고 해결: 불필요한 중괄호 제거 ---
     final messageContent =
-        "안녕하세요 $animal.ownerName님, [$formattedDate] $animal.name의 케어 기록입니다.\n- 오전 배식: $latestLog.amMeal\n- 오후 배식: $latestLog.pmMeal\n- 급수: $latestLog.water\n- 운동: $latestLog.exercise";
+        "안녕하세요 ${animal.ownerName}님, [$formattedDate] ${animal.name}의 케어 기록입니다.\n- 오전 배식: ${latestLog.amMeal}\n- 오후 배식: ${latestLog.pmMeal}\n- 급수: ${latestLog.water}\n- 운동: ${latestLog.exercise}";
 
-    // --- url_launcher를 사용하여 문자 앱 실행 ---
     final Uri smsLaunchUri = Uri(
       scheme: 'sms',
-      path: animal.ownerContact, // 보호자 연락처
+      path: animal.ownerContact,
       queryParameters: <String, String>{
-        'body': messageContent, // 보낼 메시지 내용
+        'body': messageContent,
       },
     );
 
@@ -245,10 +243,18 @@ class AnimalDetailScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(formattedDate,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16)),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(formattedDate,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16)),
+                                Text(log.recordedByEmail,
+                                    style: const TextStyle(
+                                        color: Colors.grey, fontSize: 12)),
+                              ],
+                            ),
                             const Divider(),
                             Text('오전 배식: ${log.amMeal}'),
                             Text('오후 배식: ${log.pmMeal}'),

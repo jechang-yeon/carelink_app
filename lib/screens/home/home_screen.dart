@@ -1,11 +1,11 @@
-import 'package:carelink_app/screens/add_shelter_screen.dart';
-import 'package:carelink_app/screens/edit_shelter_screen.dart';
-import 'package:carelink_app/screens/shelter_detail_screen.dart';
+import 'package:carelink_app/screens/shelter/add_shelter_screen.dart';
+import 'package:carelink_app/screens/shelter/edit_shelter_screen.dart';
+import 'package:carelink_app/screens/shelter/shelter_detail_screen.dart';
 import 'package:carelink_app/widgets/delete_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/shelter.dart';
+import '../../models/shelter.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
