@@ -1,5 +1,8 @@
+import 'dart:io';
+import 'package:carelink_app/services/image_picker_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
 
 class AddAnimalScreen extends StatefulWidget {
   final String shelterId;
@@ -13,11 +16,14 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
 
+  final _imagePickerService = ImagePickerService();
+  List<XFile> _selectedImages = [];
+
   // Form Field 값을 저장하기 위한 컨트롤러 및 변수들
   final _nameController = TextEditingController();
-  String? _intakeType = '입소'; // '입소', '구조'
-  String? _species = '개'; // '개', '고양이', '기타'
-  String? _gender; // '수컷', '암컷'
+  String? _intakeType = '입소';
+  String? _species = '개';
+  String? _gender;
   final _weightController = TextEditingController();
   bool _isNeutered = false;
   bool _isRegistered = false;
@@ -40,6 +46,16 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     super.dispose();
   }
 
+  Future<void> _pickImages() async {
+    final List<XFile> images =
+    await _imagePickerService.pickImagesFromGallery();
+    if (images.isNotEmpty) {
+      setState(() {
+        _selectedImages = images;
+      });
+    }
+  }
+
   Future<void> _saveAnimal() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
@@ -47,6 +63,13 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
       });
 
       try {
+        // 1. 이미지 업로드
+        List<String> imageUrls = await _imagePickerService.uploadImages(
+          images: _selectedImages,
+          shelterId: widget.shelterId,
+        );
+
+        // 2. Firestore에 데이터 저장
         await FirebaseFirestore.instance
             .collection('shelters')
             .doc(widget.shelterId)
@@ -59,7 +82,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
           'weight': double.tryParse(_weightController.text) ?? 0.0,
           'isNeutered': _isNeutered,
           'isRegistered': _isRegistered,
-          'photoUrls': [],
+          'photoUrls': imageUrls, // 업로드된 이미지 URL 저장
           'ownerName': _ownerNameController.text,
           'ownerContact': _ownerContactController.text,
           'ownerAddress': _ownerAddressController.text,
@@ -68,6 +91,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
             'shelterUse': _shelterUseConsent,
             'foster': _fosterConsent,
           },
+          'status': '보호중',
           'createdAt': Timestamp.now(),
         });
 
@@ -103,6 +127,12 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const Text('사진 등록',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              _buildPhotoPicker(),
+              const SizedBox(height: 24),
+
               const Text('동물 정보',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
@@ -252,6 +282,44 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPhotoPicker() {
+    return Column(
+      children: [
+        SizedBox(
+          height: 100,
+          child: _selectedImages.isEmpty
+              ? Center(
+              child: Text('선택된 사진이 없습니다.',
+                  style: TextStyle(color: Colors.grey[600])))
+              : ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: _selectedImages.length,
+            itemBuilder: (context, index) {
+              return Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.file(
+                    File(_selectedImages[index].path),
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextButton.icon(
+          onPressed: _pickImages,
+          icon: const Icon(Icons.photo_library),
+          label: const Text('갤러리에서 사진 선택'),
+        ),
+      ],
     );
   }
 }
