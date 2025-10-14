@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "287651637943",
+    "firebase_url": "https://carelink-b0c59-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "carelink-b0c59",
+    "storage_bucket": "carelink-b0c59.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:287651637943:android:50851ea608b5e2d0dbbb32",
+        "android_client_info": {
+          "package_name": "com.example.carelink_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdCEL7DQWzBIfZqDDlcUeJbCyZElTFWN8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
