@@ -14,6 +14,7 @@ class Animal {
   final String ownerContact; // 보호자 연락처
   final String ownerAddress; // 보호자 주소
   final Map<String, bool> consents; // 동의 항목
+  final String status; // 동물의 현재 상태 ('보호중', '퇴소' 등)
   final Timestamp createdAt;
 
   Animal({
@@ -30,6 +31,7 @@ class Animal {
     required this.ownerContact,
     required this.ownerAddress,
     required this.consents,
+    required this.status,
     required this.createdAt,
   });
 
@@ -38,7 +40,7 @@ class Animal {
     return Animal(
       id: doc.id,
       name: data['name'] ?? '',
-      intakeType: data['intakeType'] ?? '입소', // 기본값을 '입소'로 설정
+      intakeType: data['intakeType'] ?? '입소',
       species: data['species'] ?? '',
       gender: data['gender'] ?? '',
       weight: (data['weight'] ?? 0.0).toDouble(),
@@ -49,6 +51,7 @@ class Animal {
       ownerContact: data['ownerContact'] ?? '',
       ownerAddress: data['ownerAddress'] ?? '',
       consents: Map<String, bool>.from(data['consents'] ?? {}),
+      status: data['status'] ?? '보호중', // Firestore에 status 필드가 없을 경우 기본값을 '보호중'으로 설정
       createdAt: data['createdAt'] ?? Timestamp.now(),
     );
   }

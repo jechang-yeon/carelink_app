@@ -1,3 +1,4 @@
+import 'package:carelink_app/widgets/delete_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -11,6 +12,27 @@ class AnimalDetailScreen extends StatelessWidget {
   final Animal animal;
   const AnimalDetailScreen(
       {super.key, required this.shelterId, required this.animal});
+
+  Future<void> _deleteAnimal(BuildContext context) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('shelters')
+          .doc(shelterId)
+          .collection('animals')
+          .doc(animal.id)
+          .delete();
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // 상세 화면 닫기
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${animal.name} 정보가 삭제되었습니다.')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('삭제 중 오류가 발생했습니다: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +55,21 @@ class AnimalDetailScreen extends StatelessWidget {
             },
             tooltip: '정보 수정',
           ),
+          IconButton(
+            icon: const Icon(Icons.delete),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => DeleteConfirmationDialog(
+                  title: '동물 정보 삭제',
+                  content:
+                  '정말로 ${animal.name}의 정보를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
+                  onConfirm: () => _deleteAnimal(context),
+                ),
+              );
+            },
+            tooltip: '정보 삭제',
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -43,6 +80,7 @@ class AnimalDetailScreen extends StatelessWidget {
             const Text('기본 정보',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const Divider(),
+            _buildInfoRow('현재 상태', animal.status),
             _buildInfoRow('입소 유형', animal.intakeType),
             _buildInfoRow('이름', animal.name),
             _buildInfoRow('종류', animal.species),

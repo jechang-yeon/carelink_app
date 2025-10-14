@@ -22,6 +22,7 @@ class _EditAnimalScreenState extends State<EditAnimalScreen> {
 
   // Form Field 값을 저장하기 위한 컨트롤러 및 변수들
   late TextEditingController _nameController;
+  late String? _status;
   late String? _intakeType;
   late String? _species;
   late String? _gender;
@@ -40,6 +41,7 @@ class _EditAnimalScreenState extends State<EditAnimalScreen> {
     super.initState();
     // 기존 동물 정보로 폼 필드 초기화
     _nameController = TextEditingController(text: widget.animal.name);
+    _status = widget.animal.status;
     _intakeType = widget.animal.intakeType;
     _species = widget.animal.species;
     _gender = widget.animal.gender;
@@ -82,6 +84,7 @@ class _EditAnimalScreenState extends State<EditAnimalScreen> {
             .doc(widget.animal.id)
             .update({
           'name': _nameController.text,
+          'status': _status,
           'intakeType': _intakeType,
           'species': _species,
           'gender': _gender,
@@ -132,6 +135,21 @@ class _EditAnimalScreenState extends State<EditAnimalScreen> {
             children: [
               const Text('동물 정보',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: _status,
+                decoration: const InputDecoration(labelText: '동물 상태'),
+                items: ['보호중', '퇴소', '병원 이관', '단체보호', '폐기']
+                    .map((label) => DropdownMenuItem(
+                  value: label,
+                  child: Text(label),
+                ))
+                    .toList(),
+                onChanged: (value) {
+                  _status = value;
+                },
+                validator: (value) => value == null ? '상태를 선택해주세요.' : null,
+              ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: _intakeType,
