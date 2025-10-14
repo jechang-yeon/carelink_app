@@ -2,6 +2,7 @@ import 'package:carelink_app/widgets/delete_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart'; // url_launcher import
 import '../models/animal.dart';
 import '../models/care_log.dart';
 import '../widgets/add_care_log_dialog.dart';
@@ -30,6 +31,52 @@ class AnimalDetailScreen extends StatelessWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('삭제 중 오류가 발생했습니다: $e')),
+      );
+    }
+  }
+
+  // --- 수정된 함수: 보호자에게 알림 전송 ---
+  Future<void> _sendCareUpdateToOwner(BuildContext context) async {
+    final logSnapshot = await FirebaseFirestore.instance
+        .collection('shelters')
+        .doc(shelterId)
+        .collection('animals')
+        .doc(animal.id)
+        .collection('careLogs')
+        .orderBy('date', descending: true)
+        .limit(1)
+        .get();
+
+    if (logSnapshot.docs.isEmpty) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('전송할 케어 기록이 없습니다.')),
+      );
+      return;
+    }
+
+    final latestLog = CareLog.fromFirestore(logSnapshot.docs.first);
+    final formattedDate =
+    DateFormat('yyyy-MM-dd').format(latestLog.date.toDate());
+    // --- 경고 해결: 불필요한 중괄호 제거 ---
+    final messageContent =
+        "안녕하세요 $animal.ownerName님, [$formattedDate] $animal.name의 케어 기록입니다.\n- 오전 배식: $latestLog.amMeal\n- 오후 배식: $latestLog.pmMeal\n- 급수: $latestLog.water\n- 운동: $latestLog.exercise";
+
+    // --- url_launcher를 사용하여 문자 앱 실행 ---
+    final Uri smsLaunchUri = Uri(
+      scheme: 'sms',
+      path: animal.ownerContact, // 보호자 연락처
+      queryParameters: <String, String>{
+        'body': messageContent, // 보낼 메시지 내용
+      },
+    );
+
+    if (await canLaunchUrl(smsLaunchUri)) {
+      await launchUrl(smsLaunchUri);
+    } else {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('문자 메시지를 보낼 수 없습니다.')),
       );
     }
   }
@@ -77,7 +124,6 @@ class AnimalDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- 사진 표시 UI ---
             if (animal.photoUrls.isNotEmpty)
               SizedBox(
                 height: 200,
@@ -117,12 +163,10 @@ class AnimalDetailScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Center(
-                  child: Icon(Icons.camera_alt,
-                      color: Colors.grey, size: 50),
+                  child: Icon(Icons.camera_alt, color: Colors.grey, size: 50),
                 ),
               ),
             const SizedBox(height: 24),
-
             const Text('기본 정보',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const Divider(),
@@ -142,8 +186,22 @@ class AnimalDetailScreen extends StatelessWidget {
             _buildInfoRow('연락처', animal.ownerContact),
             _buildInfoRow('주소', animal.ownerAddress),
             const SizedBox(height: 24),
-            const Text('데일리 케어 기록',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('데일리 케어 기록',
+                    style:
+                    TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                TextButton.icon(
+                  onPressed: () => _sendCareUpdateToOwner(context),
+                  icon: const Icon(Icons.send, size: 18),
+                  label: const Text('알림 전송'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Theme.of(context).primaryColor,
+                  ),
+                )
+              ],
+            ),
             const Divider(),
             StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance

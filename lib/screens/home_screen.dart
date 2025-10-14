@@ -1,5 +1,7 @@
 import 'package:carelink_app/screens/add_shelter_screen.dart';
+import 'package:carelink_app/screens/edit_shelter_screen.dart';
 import 'package:carelink_app/screens/shelter_detail_screen.dart';
+import 'package:carelink_app/widgets/delete_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,6 +9,29 @@ import '../models/shelter.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
+
+  Future<void> _deleteShelter(BuildContext context, Shelter shelter) async {
+    try {
+      // 참고: Firestore의 하위 컬렉션은 문서 삭제 시 자동으로 삭제되지 않습니다.
+      // 실제 프로덕션 앱에서는 이 보호소에 속한 모든 동물 정보(하위 컬렉션)를
+      // 먼저 삭제하는 로직(예: Cloud Function)을 추가해야 합니다.
+      // 현재는 보호소 문서만 삭제합니다.
+      await FirebaseFirestore.instance
+          .collection('shelters')
+          .doc(shelter.id)
+          .delete();
+
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${shelter.name} 보호소 정보가 삭제되었습니다.')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('삭제 중 오류가 발생했습니다: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +80,7 @@ class HomeScreen extends StatelessWidget {
               return Card(
                 margin: const EdgeInsets.symmetric(vertical: 8.0),
                 child: ListTile(
-                  contentPadding: const EdgeInsets.all(16.0),
+                  contentPadding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
                   leading: Icon(
                     Icons.home_work_rounded,
                     color: shelter.status == '운영중'
@@ -71,16 +96,40 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   subtitle: Text(shelter.address),
-                  trailing: Icon(
-                    Icons.circle,
-                    color: shelter.status == '운영중' ? Colors.green : Colors.red,
-                    size: 12,
+                  trailing: PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'edit') {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                EditShelterScreen(shelter: shelter),
+                          ),
+                        );
+                      } else if (value == 'delete') {
+                        showDialog(
+                          context: context,
+                          builder: (context) => DeleteConfirmationDialog(
+                            title: '보호소 삭제',
+                            content:
+                            '정말로 ${shelter.name} 보호소를 삭제하시겠습니까?\n보호소에 등록된 모든 동물 정보도 함께 삭제되며, 이 작업은 되돌릴 수 없습니다.',
+                            onConfirm: () => _deleteShelter(context, shelter),
+                          ),
+                        );
+                      }
+                    },
+                    itemBuilder: (BuildContext context) =>
+                    <PopupMenuEntry<String>>[
+                      const PopupMenuItem<String>(
+                        value: 'edit',
+                        child: Text('수정'),
+                      ),
+                      const PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Text('삭제'),
+                      ),
+                    ],
                   ),
                   onTap: () {
-                    // --- 바로 이 부분입니다! ---
-                    // 탭하면 Navigator를 사용해 ShelterDetailScreen으로 이동합니다.
-                    // shelter 객체를 파라미터로 넘겨주어, 상세 화면에서
-                    // 어떤 보호소의 정보를 보여줄지 알려줍니다.
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (context) =>
