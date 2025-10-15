@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:carelink_app/constants/terms_content.dart';
+import 'package:carelink_app/screens/common/terms_view_screen.dart';
 import 'package:carelink_app/services/image_picker_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -19,7 +21,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   final _imagePickerService = ImagePickerService();
   List<XFile> _selectedImages = [];
 
-  // Form Field 값을 저장하기 위한 컨트롤러 및 변수들
+  // Form Fields
   final _nameController = TextEditingController();
   String? _intakeType = '입소';
   String? _species = '개';
@@ -31,7 +33,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   final _ownerContactController = TextEditingController();
   final _ownerAddressController = TextEditingController();
 
-  // 동의 항목
+  // Consent states
   bool _privacyConsent = false;
   bool _shelterUseConsent = false;
   bool _fosterConsent = false;
@@ -57,19 +59,25 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   }
 
   Future<void> _saveAnimal() async {
+    // 모든 동의 항목이 체크되었는지 확인
+    if (!_privacyConsent || !_shelterUseConsent || !_fosterConsent) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('모든 약관에 동의해주세요.')),
+      );
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
       });
 
       try {
-        // 1. 이미지 업로드
         List<String> imageUrls = await _imagePickerService.uploadImages(
           images: _selectedImages,
           shelterId: widget.shelterId,
         );
 
-        // 2. Firestore에 데이터 저장
         await FirebaseFirestore.instance
             .collection('shelters')
             .doc(widget.shelterId)
@@ -82,7 +90,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
           'weight': double.tryParse(_weightController.text) ?? 0.0,
           'isNeutered': _isNeutered,
           'isRegistered': _isRegistered,
-          'photoUrls': imageUrls, // 업로드된 이미지 URL 저장
+          'photoUrls': imageUrls,
           'ownerName': _ownerNameController.text,
           'ownerContact': _ownerContactController.text,
           'ownerAddress': _ownerAddressController.text,
@@ -127,12 +135,14 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Photo Picker UI...
               const Text('사진 등록',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               _buildPhotoPicker(),
               const SizedBox(height: 24),
 
+              // Animal Info Form...
               const Text('동물 정보',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
@@ -149,6 +159,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                   _intakeType = value;
                 },
               ),
+              // ... Other form fields (name, species, etc.)
               const SizedBox(height: 16),
               TextFormField(
                 controller: _nameController,
@@ -213,6 +224,8 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                 },
               ),
               const Divider(height: 40),
+
+              // Guardian Info Form...
               const Text('보호자 정보',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
@@ -238,32 +251,38 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                 value!.isEmpty ? '보호자 주소를 입력해주세요.' : null,
               ),
               const Divider(height: 40),
-              const Text('이용 동의',
+
+              // --- 수정된 동의 항목 UI ---
+              const Text('이용 동의 (필수)',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              CheckboxListTile(
-                title: const Text('개인정보 이용 동의'),
+              const SizedBox(height: 8),
+              _buildConsentTile(
+                title: TermsContent.privacyTitle,
+                content: TermsContent.privacyContent,
                 value: _privacyConsent,
-                onChanged: (value) {
+                onChanged: (newValue) {
                   setState(() {
-                    _privacyConsent = value!;
+                    _privacyConsent = newValue;
                   });
                 },
               ),
-              CheckboxListTile(
-                title: const Text('임시보호소 이용 동의'),
+              _buildConsentTile(
+                title: TermsContent.shelterUseTitle,
+                content: TermsContent.shelterUseContent,
                 value: _shelterUseConsent,
-                onChanged: (value) {
+                onChanged: (newValue) {
                   setState(() {
-                    _shelterUseConsent = value!;
+                    _shelterUseConsent = newValue;
                   });
                 },
               ),
-              CheckboxListTile(
-                title: const Text('동물 보호 위탁 동의'),
+              _buildConsentTile(
+                title: TermsContent.fosterTitle,
+                content: TermsContent.fosterContent,
                 value: _fosterConsent,
-                onChanged: (value) {
+                onChanged: (newValue) {
                   setState(() {
-                    _fosterConsent = value!;
+                    _fosterConsent = newValue;
                   });
                 },
               ),
@@ -285,7 +304,42 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     );
   }
 
+  // 동의 항목을 위한 헬퍼 위젯
+  Widget _buildConsentTile({
+    required String title,
+    required String content,
+    required bool value,
+    required Function(bool) onChanged,
+  }) {
+    return Row(
+      children: [
+        Checkbox(
+          value: value,
+          onChanged: (newValue) => onChanged(newValue!),
+        ),
+        Expanded(
+          child: InkWell(
+            onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) =>
+                    TermsViewScreen(title: title, content: content),
+              ));
+            },
+            child: Text(
+              title,
+              style: const TextStyle(
+                decoration: TextDecoration.underline,
+                color: Colors.blue,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildPhotoPicker() {
+    // ... Photo Picker UI code (unchanged)
     return Column(
       children: [
         SizedBox(

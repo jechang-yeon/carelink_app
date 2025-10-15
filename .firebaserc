@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "carelink-b0c59"
-  }
+    "default": "carelink-app-v2"
+  },
+  "targets": {},
+  "etags": {}
 }
