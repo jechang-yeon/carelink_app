@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:carelink_app/constants/terms_content.dart';
 import 'package:carelink_app/screens/common/terms_view_screen.dart';
 import 'package:carelink_app/services/image_picker_service.dart';
+import 'package:carelink_app/widgets/address_input_field.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
@@ -19,7 +20,9 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   bool _isLoading = false;
 
   final _imagePickerService = ImagePickerService();
-  List<XFile> _selectedImages = [];
+  // --- 경고 해결: final 키워드 추가 ---
+  final List<XFile> _selectedImages = [];
+  final PageController _pageController = PageController();
 
   // Form Fields
   final _nameController = TextEditingController();
@@ -32,6 +35,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   final _ownerNameController = TextEditingController();
   final _ownerContactController = TextEditingController();
   final _ownerAddressController = TextEditingController();
+  final _ownerAddressDetailController = TextEditingController();
 
   // Consent states
   bool _privacyConsent = false;
@@ -40,26 +44,43 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
 
   @override
   void dispose() {
+    // Dispose all controllers
+    _pageController.dispose();
     _nameController.dispose();
     _weightController.dispose();
     _ownerNameController.dispose();
     _ownerContactController.dispose();
     _ownerAddressController.dispose();
+    _ownerAddressDetailController.dispose();
     super.dispose();
   }
 
-  Future<void> _pickImages() async {
-    final List<XFile> images =
-    await _imagePickerService.pickImagesFromGallery();
-    if (images.isNotEmpty) {
-      setState(() {
-        _selectedImages = images;
-      });
+  Future<void> _pickImages(ImageSource source) async {
+    if (source == ImageSource.gallery) {
+      final List<XFile> images =
+      await _imagePickerService.pickImagesFromGallery();
+      if (images.isNotEmpty) {
+        setState(() {
+          _selectedImages.addAll(images);
+        });
+      }
+    } else {
+      final XFile? image = await _imagePickerService.pickImageFromCamera();
+      if (image != null) {
+        setState(() {
+          _selectedImages.add(image);
+        });
+      }
     }
   }
 
+  void _deleteImage(int index) {
+    setState(() {
+      _selectedImages.removeAt(index);
+    });
+  }
+
   Future<void> _saveAnimal() async {
-    // 모든 동의 항목이 체크되었는지 확인
     if (!_privacyConsent || !_shelterUseConsent || !_fosterConsent) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('모든 약관에 동의해주세요.')),
@@ -94,6 +115,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
           'ownerName': _ownerNameController.text,
           'ownerContact': _ownerContactController.text,
           'ownerAddress': _ownerAddressController.text,
+          'ownerAddressDetail': _ownerAddressDetailController.text,
           'consents': {
             'privacy': _privacyConsent,
             'shelterUse': _shelterUseConsent,
@@ -135,14 +157,10 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Photo Picker UI...
-              const Text('사진 등록',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              _buildPhotoPicker(),
+              // --- 새로운 사진 등록 UI ---
+              _buildPhotoUploader(),
               const SizedBox(height: 24),
 
-              // Animal Info Form...
               const Text('동물 정보',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
@@ -159,7 +177,6 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                   _intakeType = value;
                 },
               ),
-              // ... Other form fields (name, species, etc.)
               const SizedBox(height: 16),
               TextFormField(
                 controller: _nameController,
@@ -224,8 +241,6 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                 },
               ),
               const Divider(height: 40),
-
-              // Guardian Info Form...
               const Text('보호자 정보',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
@@ -244,15 +259,11 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                 value!.isEmpty ? '보호자 연락처를 입력해주세요.' : null,
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _ownerAddressController,
-                decoration: const InputDecoration(labelText: '보호자 주소'),
-                validator: (value) =>
-                value!.isEmpty ? '보호자 주소를 입력해주세요.' : null,
+              AddressInputField(
+                mainAddressController: _ownerAddressController,
+                detailAddressController: _ownerAddressDetailController,
               ),
               const Divider(height: 40),
-
-              // --- 수정된 동의 항목 UI ---
               const Text('이용 동의 (필수)',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
@@ -304,13 +315,11 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     );
   }
 
-  // 동의 항목을 위한 헬퍼 위젯
-  Widget _buildConsentTile({
-    required String title,
-    required String content,
-    required bool value,
-    required Function(bool) onChanged,
-  }) {
+  Widget _buildConsentTile(
+      {required String title,
+        required String content,
+        required bool value,
+        required Function(bool) onChanged}) {
     return Row(
       children: [
         Checkbox(
@@ -338,40 +347,87 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     );
   }
 
-  Widget _buildPhotoPicker() {
-    // ... Photo Picker UI code (unchanged)
-    return Column(
+  // --- 새로운 사진 업로더 위젯 ---
+  Widget _buildPhotoUploader() {
+    return Stack(
       children: [
-        SizedBox(
-          height: 100,
+        Container(
+          height: 250,
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
           child: _selectedImages.isEmpty
-              ? Center(
-              child: Text('선택된 사진이 없습니다.',
-                  style: TextStyle(color: Colors.grey[600])))
-              : ListView.builder(
-            scrollDirection: Axis.horizontal,
+              ? const Center(
+            child:
+            Text('사진을 등록해주세요.', style: TextStyle(color: Colors.grey)),
+          )
+              : PageView.builder(
+            controller: _pageController,
             itemCount: _selectedImages.length,
             itemBuilder: (context, index) {
-              return Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.file(
-                    File(_selectedImages[index].path),
-                    width: 100,
-                    height: 100,
-                    fit: BoxFit.cover,
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(
+                      File(_selectedImages[index].path),
+                      fit: BoxFit.cover,
+                    ),
                   ),
-                ),
+                  // 사진 삭제 버튼
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: CircleAvatar(
+                      radius: 18,
+                      // --- 경고 해결: .withAlpha(153) 사용 ---
+                      backgroundColor: Colors.black.withAlpha(153),
+                      child: IconButton(
+                        icon: const Icon(Icons.delete,
+                            color: Colors.white, size: 18),
+                        onPressed: () => _deleteImage(index),
+                      ),
+                    ),
+                  ),
+                ],
               );
             },
           ),
         ),
-        const SizedBox(height: 8),
-        TextButton.icon(
-          onPressed: _pickImages,
-          icon: const Icon(Icons.photo_library),
-          label: const Text('갤러리에서 사진 선택'),
+        // 갤러리/카메라 선택 아이콘
+        Positioned(
+          top: 8,
+          right: 8,
+          child: Column(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                // --- 경고 해결: .withAlpha(153) 사용 ---
+                backgroundColor: Colors.black.withAlpha(153),
+                child: IconButton(
+                  icon: const Icon(Icons.photo_library,
+                      color: Colors.white, size: 18),
+                  onPressed: () => _pickImages(ImageSource.gallery),
+                  tooltip: '갤러리에서 선택',
+                ),
+              ),
+              const SizedBox(height: 8),
+              CircleAvatar(
+                radius: 18,
+                // --- 경고 해결: .withAlpha(153) 사용 ---
+                backgroundColor: Colors.black.withAlpha(153),
+                child: IconButton(
+                  icon:
+                  const Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                  onPressed: () => _pickImages(ImageSource.camera),
+                  tooltip: '카메라로 촬영',
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

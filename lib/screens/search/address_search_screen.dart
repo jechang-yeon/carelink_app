@@ -36,11 +36,13 @@ class _AddressSearchScreenState extends State<AddressSearchScreen> {
       ..addJavaScriptChannel(
         'onComplete',
         onMessageReceived: (JavaScriptMessage message) {
-          // 주소 검색이 완료되면, 선택된 주소 데이터를 가지고 이전 화면으로 돌아갑니다.
           Navigator.of(context).pop(message.message);
         },
       )
-      ..loadRequest(Uri.parse('https://jechang-yeon.github.io/carelink_postcode/')); // 여기에 나중에 만들 주소 검색 페이지 URL 입력
+    // --- 수정된 URL ---
+    // 사용자님의 GitHub Pages URL로 변경해야 합니다.
+      ..loadRequest(Uri.parse(
+          'https://jechang-yeon.github.io/carelink_postcode/postcode.html'));
 
     if (controller.platform is AndroidWebViewController) {
       AndroidWebViewController.enableDebugging(true);

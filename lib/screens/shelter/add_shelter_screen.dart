@@ -1,6 +1,6 @@
+import 'package:carelink_app/widgets/address_input_field.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../search/address_search_screen.dart'; // 주소 검색 화면 import
 
 class AddShelterScreen extends StatefulWidget {
   const AddShelterScreen({super.key});
@@ -12,7 +12,8 @@ class AddShelterScreen extends StatefulWidget {
 class _AddShelterScreenState extends State<AddShelterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _addressController = TextEditingController(); // 주소 컨트롤러
+  final _addressController = TextEditingController();
+  final _addressDetailController = TextEditingController(); // 상세 주소 컨트롤러
   String _status = '운영중';
   bool _isLoading = false;
 
@@ -20,6 +21,7 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
   void dispose() {
     _nameController.dispose();
     _addressController.dispose();
+    _addressDetailController.dispose();
     super.dispose();
   }
 
@@ -32,6 +34,7 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
         await FirebaseFirestore.instance.collection('shelters').add({
           'name': _nameController.text,
           'address': _addressController.text,
+          'addressDetail': _addressDetailController.text, // 상세 주소 저장
           'status': _status,
           'createdAt': Timestamp.now(),
         });
@@ -47,8 +50,6 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
           SnackBar(content: Text('오류가 발생했습니다: $e')),
         );
       } finally {
-        // --- 수정된 부분 ---
-        // return을 사용하지 않고, mounted 상태일 때만 setState를 호출하도록 변경
         if (mounted) {
           setState(() {
             _isLoading = false;
@@ -78,59 +79,14 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
                   labelText: '보호소 이름',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '보호소 이름을 입력해주세요.';
-                  }
-                  return null;
-                },
+                validator: (value) =>
+                value!.isEmpty ? '보호소 이름을 입력해주세요.' : null,
               ),
               const SizedBox(height: 16),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _addressController,
-                      decoration: const InputDecoration(
-                        labelText: '보호소 주소',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return '보호소 주소를 입력해주세요.';
-                        }
-                        return null;
-                      },
-                      maxLines: 2, // 주소가 길 수 있으므로 2줄로 설정
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () async {
-                      // 주소 검색 화면으로 이동하고 결과를 받음
-                      final result = await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const AddressSearchScreen(),
-                        ),
-                      );
-
-                      // 결과가 있으면 주소 컨트롤러에 값 설정
-                      if (result != null && result is String) {
-                        setState(() {
-                          _addressController.text = result;
-                        });
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 16,
-                      ),
-                    ),
-                    child: const Text('주소 검색'),
-                  ),
-                ],
+              // --- 새로운 주소 입력 필드 적용 ---
+              AddressInputField(
+                mainAddressController: _addressController,
+                detailAddressController: _addressDetailController,
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(

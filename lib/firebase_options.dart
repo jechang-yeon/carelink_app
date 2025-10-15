@@ -41,53 +41,48 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCCqnPBPoaDgzr6-r8fmjf4zRyqvJLFwMY',
-    appId: '1:287651637943:web:3de304736efca920dbbb32',
-    messagingSenderId: '287651637943',
-    projectId: 'carelink-b0c59',
-    authDomain: 'carelink-b0c59.firebaseapp.com',
-    databaseURL: 'https://carelink-b0c59-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'carelink-b0c59.firebasestorage.app',
-    measurementId: 'G-R83W0V1GVW',
+    apiKey: 'AIzaSyDtf3nFkcZKrJVZngCgFGblFRQJbDTNdQY',
+    appId: '1:763054872497:web:d378abc427f7d2e68c0f90',
+    messagingSenderId: '763054872497',
+    projectId: 'carelink-app-v2',
+    authDomain: 'carelink-app-v2.firebaseapp.com',
+    storageBucket: 'carelink-app-v2.firebasestorage.app',
+    measurementId: 'G-JK0V4Q0HVF',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAdCEL7DQWzBIfZqDDlcUeJbCyZElTFWN8',
-    appId: '1:287651637943:android:50851ea608b5e2d0dbbb32',
-    messagingSenderId: '287651637943',
-    projectId: 'carelink-b0c59',
-    databaseURL: 'https://carelink-b0c59-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'carelink-b0c59.firebasestorage.app',
+    apiKey: 'AIzaSyC22JO2wAfy4I62KQfvZxF61-chfJUETdM',
+    appId: '1:763054872497:android:da786ae0f83a5c528c0f90',
+    messagingSenderId: '763054872497',
+    projectId: 'carelink-app-v2',
+    storageBucket: 'carelink-app-v2.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyA_pOSA_QG-TyGavP8yP3H373M4PGkq4yA',
-    appId: '1:287651637943:ios:acddba7b8d206763dbbb32',
-    messagingSenderId: '287651637943',
-    projectId: 'carelink-b0c59',
-    databaseURL: 'https://carelink-b0c59-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'carelink-b0c59.firebasestorage.app',
+    apiKey: 'AIzaSyA0o239x68o8w9wkzHrPhhW--M312BWI0I',
+    appId: '1:763054872497:ios:89e278e61e60d4738c0f90',
+    messagingSenderId: '763054872497',
+    projectId: 'carelink-app-v2',
+    storageBucket: 'carelink-app-v2.firebasestorage.app',
     iosBundleId: 'com.example.carelinkApp',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyA_pOSA_QG-TyGavP8yP3H373M4PGkq4yA',
-    appId: '1:287651637943:ios:acddba7b8d206763dbbb32',
-    messagingSenderId: '287651637943',
-    projectId: 'carelink-b0c59',
-    databaseURL: 'https://carelink-b0c59-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'carelink-b0c59.firebasestorage.app',
+    apiKey: 'AIzaSyA0o239x68o8w9wkzHrPhhW--M312BWI0I',
+    appId: '1:763054872497:ios:89e278e61e60d4738c0f90',
+    messagingSenderId: '763054872497',
+    projectId: 'carelink-app-v2',
+    storageBucket: 'carelink-app-v2.firebasestorage.app',
     iosBundleId: 'com.example.carelinkApp',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCCqnPBPoaDgzr6-r8fmjf4zRyqvJLFwMY',
-    appId: '1:287651637943:web:d9fd12d650a687a3dbbb32',
-    messagingSenderId: '287651637943',
-    projectId: 'carelink-b0c59',
-    authDomain: 'carelink-b0c59.firebaseapp.com',
-    databaseURL: 'https://carelink-b0c59-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'carelink-b0c59.firebasestorage.app',
-    measurementId: 'G-YD3LPC8D3Z',
+    apiKey: 'AIzaSyDtf3nFkcZKrJVZngCgFGblFRQJbDTNdQY',
+    appId: '1:763054872497:web:8e12bbec8b3cfe6f8c0f90',
+    messagingSenderId: '763054872497',
+    projectId: 'carelink-app-v2',
+    authDomain: 'carelink-app-v2.firebaseapp.com',
+    storageBucket: 'carelink-app-v2.firebasestorage.app',
+    measurementId: 'G-MCEQ7RKCS3',
   );
 }

@@ -49,7 +49,7 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
         });
 
         if (!mounted) return;
-        Navigator.of(context).pop(); // 수정 후 대시보드로 복귀
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('보호소 정보가 성공적으로 수정되었습니다.')),
         );
@@ -98,8 +98,10 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _addressController,
+                      readOnly: true,
                       decoration: const InputDecoration(
                         labelText: '보호소 주소',
+                        hintText: '오른쪽 버튼으로 주소를 검색하세요.',
                         border: OutlineInputBorder(),
                       ),
                       validator: (value) =>
@@ -124,10 +126,10 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
-                        vertical: 16,
+                        vertical: 24,
                       ),
                     ),
-                    child: const Text('주소 검색'),
+                    child: const Text('검색'),
                   ),
                 ],
               ),

@@ -24,10 +24,8 @@ class ImagePickerService {
     List<String> downloadUrls = [];
     try {
       for (var image in images) {
-        // 파일 이름이 중복되지 않도록 현재 시간으로 파일명 생성
         final String fileName =
             '${DateTime.now().millisecondsSinceEpoch}_${image.name}';
-        // 저장 경로 설정: /animal_photos/{보호소ID}/{파일명}
         final Reference ref =
         _storage.ref().child('animal_photos/$shelterId/$fileName');
 
@@ -37,7 +35,6 @@ class ImagePickerService {
         downloadUrls.add(downloadUrl);
       }
     } catch (e) {
-      // print 대신 debugPrint 사용
       debugPrint('이미지 업로드 오류: $e');
     }
     return downloadUrls;
