@@ -6,30 +6,54 @@ import '../../models/shelter.dart';
 import '../../models/animal.dart';
 import '../../services/map_service.dart';
 
-class ShelterDetailScreen extends StatelessWidget {
+// --- StatefulWidget으로 변경 ---
+class ShelterDetailScreen extends StatefulWidget {
   final Shelter shelter;
 
   const ShelterDetailScreen({super.key, required this.shelter});
 
   @override
+  State<ShelterDetailScreen> createState() => _ShelterDetailScreenState();
+}
+
+class _ShelterDetailScreenState extends State<ShelterDetailScreen> {
+  // --- 검색 기능에 필요한 변수 추가 ---
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // 지도 이미지 URL 생성
-    final mapUrl = (shelter.latitude != null && shelter.longitude != null)
+    final mapUrl = (widget.shelter.latitude != null && widget.shelter.longitude != null)
         ? MapService.getStaticMapUrl(
-      latitude: shelter.latitude!,
-      longitude: shelter.longitude!,
+      latitude: widget.shelter.latitude!,
+      longitude: widget.shelter.longitude!,
     )
         : null;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(shelter.name),
+        title: Text(widget.shelter.name),
         backgroundColor: const Color(0xFFFF7A00),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- 지도 표시 UI 추가 ---
           if (mapUrl != null)
             Image.network(
               mapUrl,
@@ -55,21 +79,21 @@ class ShelterDetailScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  shelter.name,
+                  widget.shelter.name,
                   style: const TextStyle(
                       fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${shelter.address} ${shelter.addressDetail}',
+                  '${widget.shelter.address} ${widget.shelter.addressDetail}',
                   style: const TextStyle(fontSize: 16, color: Colors.grey),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '상태: ${shelter.status}',
+                  '상태: ${widget.shelter.status}',
                   style: TextStyle(
                     fontSize: 16,
-                    color: shelter.status == '운영중'
+                    color: widget.shelter.status == '운영중'
                         ? Colors.green
                         : Colors.red,
                     fontWeight: FontWeight.bold,
@@ -78,9 +102,32 @@ class ShelterDetailScreen extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(),
+          const Divider(height: 1),
+          // --- 검색창 UI 추가 ---
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                labelText: '동물 이름으로 검색',
+                hintText: '이름을 입력하세요...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                  },
+                )
+                    : null,
+              ),
+            ),
+          ),
           const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding: EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
               '보호중인 동물 목록',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -88,11 +135,13 @@ class ShelterDetailScreen extends StatelessWidget {
           ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
+              // --- 검색 쿼리에 따라 Firestore 쿼리 변경 ---
               stream: FirebaseFirestore.instance
                   .collection('shelters')
-                  .doc(shelter.id)
+                  .doc(widget.shelter.id)
                   .collection('animals')
-                  .orderBy('createdAt', descending: true)
+                  .where('name', isGreaterThanOrEqualTo: _searchQuery)
+                  .where('name', isLessThanOrEqualTo: '$_searchQuery\uf8ff')
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -101,7 +150,9 @@ class ShelterDetailScreen extends StatelessWidget {
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return Center(
                     child: Text(
-                      '아직 등록된 동물이 없습니다.',
+                      _searchQuery.isEmpty
+                          ? '아직 등록된 동물이 없습니다.'
+                          : '검색 결과가 없습니다.',
                       style: TextStyle(color: Colors.grey[600]),
                     ),
                   );
@@ -112,6 +163,7 @@ class ShelterDetailScreen extends StatelessWidget {
                     .toList();
 
                 return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   itemCount: animals.length,
                   itemBuilder: (context, index) {
                     final animal = animals[index];
@@ -124,7 +176,7 @@ class ShelterDetailScreen extends StatelessWidget {
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => AnimalDetailScreen(
-                              shelterId: shelter.id,
+                              shelterId: widget.shelter.id,
                               animal: animal,
                             ),
                           ),
@@ -142,7 +194,7 @@ class ShelterDetailScreen extends StatelessWidget {
         onPressed: () {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => AddAnimalScreen(shelterId: shelter.id),
+              builder: (context) => AddAnimalScreen(shelterId: widget.shelter.id),
             ),
           );
         },

@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:carelink_app/constants/terms_content.dart';
 import 'package:carelink_app/screens/common/terms_view_screen.dart';
 import 'package:carelink_app/services/image_picker_service.dart';
-import 'package:carelink_app/widgets/address_input_field.dart';
+import 'package:carelink_app/screens/search/address_search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
@@ -318,9 +318,60 @@ class _EditAnimalScreenState extends State<EditAnimalScreen> {
                 value!.isEmpty ? '보호자 연락처를 입력해주세요.' : null,
               ),
               const SizedBox(height: 16),
-              AddressInputField(
-                mainAddressController: _ownerAddressController,
-                detailAddressController: _ownerAddressDetailController,
+              // --- 수정된 보호자 주소 입력 위젯 ---
+              Column(
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _ownerAddressController,
+                          decoration: const InputDecoration(
+                            labelText: '주소',
+                            hintText: '검색 또는 직접 입력',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) =>
+                          value!.isEmpty ? '주소를 입력해주세요.' : null,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final result = await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const AddressSearchScreen(),
+                            ),
+                          );
+                          if (result != null &&
+                              result is Map<String, dynamic>) {
+                            setState(() {
+                              _ownerAddressController.text =
+                                  result['address'] ?? '';
+                            });
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
+                        ),
+                        child: const Text('검색'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _ownerAddressDetailController,
+                    decoration: const InputDecoration(
+                      labelText: '상세 주소',
+                      hintText: '동, 호수 등 상세 주소를 입력하세요.',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
               ),
               const Divider(height: 40),
               const Text('이용 동의 (필수)',
