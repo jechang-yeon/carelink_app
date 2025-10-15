@@ -20,7 +20,6 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   bool _isLoading = false;
 
   final _imagePickerService = ImagePickerService();
-  // --- 경고 해결: final 키워드 추가 ---
   final List<XFile> _selectedImages = [];
   final PageController _pageController = PageController();
 
@@ -77,6 +76,10 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   void _deleteImage(int index) {
     setState(() {
       _selectedImages.removeAt(index);
+      // 페이지 뷰의 현재 페이지를 조정하여 오류 방지
+      if (_selectedImages.isNotEmpty) {
+        _pageController.jumpToPage(index > 0 ? index - 1 : 0);
+      }
     });
   }
 
@@ -136,9 +139,11 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
           SnackBar(content: Text('오류가 발생했습니다: $e')),
         );
       } finally {
-        setState(() {
-          _isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     }
   }
@@ -157,10 +162,8 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // --- 새로운 사진 등록 UI ---
               _buildPhotoUploader(),
               const SizedBox(height: 24),
-
               const Text('동물 정보',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
@@ -347,7 +350,6 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     );
   }
 
-  // --- 새로운 사진 업로더 위젯 ---
   Widget _buildPhotoUploader() {
     return Stack(
       children: [
@@ -377,13 +379,11 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                       fit: BoxFit.cover,
                     ),
                   ),
-                  // 사진 삭제 버튼
                   Positioned(
                     top: 8,
                     left: 8,
                     child: CircleAvatar(
                       radius: 18,
-                      // --- 경고 해결: .withAlpha(153) 사용 ---
                       backgroundColor: Colors.black.withAlpha(153),
                       child: IconButton(
                         icon: const Icon(Icons.delete,
@@ -397,7 +397,6 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
             },
           ),
         ),
-        // 갤러리/카메라 선택 아이콘
         Positioned(
           top: 8,
           right: 8,
@@ -405,7 +404,6 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
             children: [
               CircleAvatar(
                 radius: 18,
-                // --- 경고 해결: .withAlpha(153) 사용 ---
                 backgroundColor: Colors.black.withAlpha(153),
                 child: IconButton(
                   icon: const Icon(Icons.photo_library,
@@ -417,7 +415,6 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
               const SizedBox(height: 8),
               CircleAvatar(
                 radius: 18,
-                // --- 경고 해결: .withAlpha(153) 사용 ---
                 backgroundColor: Colors.black.withAlpha(153),
                 child: IconButton(
                   icon:

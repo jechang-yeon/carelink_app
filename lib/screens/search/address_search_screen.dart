@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
@@ -36,11 +37,15 @@ class _AddressSearchScreenState extends State<AddressSearchScreen> {
       ..addJavaScriptChannel(
         'onComplete',
         onMessageReceived: (JavaScriptMessage message) {
-          Navigator.of(context).pop(message.message);
+          // --- 수정된 부분: JSON 데이터 파싱 ---
+          // 웹뷰로부터 전달받은 JSON 형식의 문자열을
+          // Dart의 Map<String, dynamic> 형태로 변환합니다.
+          final result = jsonDecode(message.message) as Map<String, dynamic>;
+
+          // 파싱된 Map 데이터를 가지고 이전 화면으로 돌아갑니다.
+          Navigator.of(context).pop(result);
         },
       )
-    // --- 수정된 URL ---
-    // 사용자님의 GitHub Pages URL로 변경해야 합니다.
       ..loadRequest(Uri.parse(
           'https://jechang-yeon.github.io/carelink_postcode/postcode.html'));
 

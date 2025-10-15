@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../models/shelter.dart';
+import '../../services/map_service.dart';
 import '../../widgets/delete_confirmation_dialog.dart';
 import '../shelter/add_shelter_screen.dart';
 import '../shelter/edit_shelter_screen.dart';
@@ -15,7 +16,6 @@ class HomeScreen extends StatelessWidget {
 
   Future<void> _deleteShelter(BuildContext context, Shelter shelter) async {
     try {
-      // 참고: 실제 앱에서는 Cloud Functions를 이용해 하위 컬렉션을 삭제해야 합니다.
       await FirebaseFirestore.instance
           .collection('shelters')
           .doc(shelter.id)
@@ -60,13 +60,9 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      // --- 화면 구조를 Column으로 변경 ---
       body: Column(
         children: [
-          // --- 1. 상단에 대시보드 요약 카드 추가 ---
           const DashboardSummaryCard(),
-
-          // --- 2. 하단에 보호소 목록을 Expanded로 감싸서 추가 ---
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
@@ -96,17 +92,39 @@ class HomeScreen extends StatelessWidget {
                   itemCount: shelters.length,
                   itemBuilder: (context, index) {
                     final shelter = shelters[index];
+                    final mapUrl = (shelter.latitude != null &&
+                        shelter.longitude != null)
+                        ? MapService.getStaticMapUrl(
+                      latitude: shelter.latitude!,
+                      longitude: shelter.longitude!,
+                      width: 120,
+                      height: 80,
+                    )
+                        : null;
+
                     return Card(
                       margin: const EdgeInsets.symmetric(vertical: 6.0),
                       child: ListTile(
                         contentPadding:
                         const EdgeInsets.fromLTRB(16, 8, 8, 8),
-                        leading: Icon(
-                          Icons.home_work_rounded,
-                          color: shelter.status == '운영중'
-                              ? const Color(0xFFFF7A00)
-                              : Colors.grey,
-                          size: 40,
+                        leading: ClipRRect(
+                          borderRadius: BorderRadius.circular(8.0),
+                          child: mapUrl != null
+                              ? Image.network(
+                            mapUrl,
+                            width: 100,
+                            height: 80,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.map, size: 40),
+                          )
+                              : Container(
+                            width: 100,
+                            height: 80,
+                            color: Colors.grey[200],
+                            child: const Icon(Icons.map,
+                                color: Colors.grey, size: 40),
+                          ),
                         ),
                         title: Text(
                           shelter.name,
@@ -115,7 +133,8 @@ class HomeScreen extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        subtitle: Text(shelter.address),
+                        subtitle: Text(
+                            '${shelter.address} ${shelter.addressDetail}'),
                         trailing: PopupMenuButton<String>(
                           onSelected: (value) {
                             if (value == 'edit') {

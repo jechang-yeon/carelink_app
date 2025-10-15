@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:carelink_app/widgets/address_input_field.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../search/address_search_screen.dart';
 
 class AddShelterScreen extends StatefulWidget {
   const AddShelterScreen({super.key});
@@ -16,6 +18,10 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
   final _addressDetailController = TextEditingController(); // 상세 주소 컨트롤러
   String _status = '운영중';
   bool _isLoading = false;
+
+  // 좌표 저장을 위한 변수
+  double? _latitude;
+  double? _longitude;
 
   @override
   void dispose() {
@@ -34,7 +40,9 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
         await FirebaseFirestore.instance.collection('shelters').add({
           'name': _nameController.text,
           'address': _addressController.text,
-          'addressDetail': _addressDetailController.text, // 상세 주소 저장
+          'addressDetail': _addressDetailController.text,
+          'latitude': _latitude, // 위도 저장
+          'longitude': _longitude, // 경도 저장
           'status': _status,
           'createdAt': Timestamp.now(),
         });
@@ -83,10 +91,63 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
                 value!.isEmpty ? '보호소 이름을 입력해주세요.' : null,
               ),
               const SizedBox(height: 16),
-              // --- 새로운 주소 입력 필드 적용 ---
-              AddressInputField(
-                mainAddressController: _addressController,
-                detailAddressController: _addressDetailController,
+              // --- 수정된 주소 입력 위젯 ---
+              Column(
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _addressController,
+                          readOnly: true,
+                          decoration: const InputDecoration(
+                            labelText: '주소',
+                            hintText: '오른쪽 버튼으로 주소를 검색하세요.',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) =>
+                          value!.isEmpty ? '주소를 검색해주세요.' : null,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final result = await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const AddressSearchScreen(),
+                            ),
+                          );
+
+                          if (result != null && result is Map<String, dynamic>) {
+                            setState(() {
+                              _addressController.text = result['address'] ?? '';
+                              // 좌표 파싱 및 저장 (문자열 -> double)
+                              _latitude = double.tryParse(result['latitude'].toString());
+                              _longitude = double.tryParse(result['longitude'].toString());
+                            });
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
+                        ),
+                        child: const Text('검색'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _addressDetailController,
+                    decoration: const InputDecoration(
+                      labelText: '상세 주소',
+                      hintText: '동, 호수 등 상세 주소를 입력하세요.',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
