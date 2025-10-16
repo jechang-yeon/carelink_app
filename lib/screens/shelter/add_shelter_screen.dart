@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'package:carelink_app/widgets/address_input_field.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../search/address_search_screen.dart';
@@ -15,11 +13,10 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _addressController = TextEditingController();
-  final _addressDetailController = TextEditingController(); // 상세 주소 컨트롤러
+  final _addressDetailController = TextEditingController();
   String _status = '운영중';
   bool _isLoading = false;
 
-  // 좌표 저장을 위한 변수
   double? _latitude;
   double? _longitude;
 
@@ -41,8 +38,8 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
           'name': _nameController.text,
           'address': _addressController.text,
           'addressDetail': _addressDetailController.text,
-          'latitude': _latitude, // 위도 저장
-          'longitude': _longitude, // 경도 저장
+          'latitude': _latitude,
+          'longitude': _longitude,
           'status': _status,
           'createdAt': Timestamp.now(),
         });
@@ -91,7 +88,6 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
                 value!.isEmpty ? '보호소 이름을 입력해주세요.' : null,
               ),
               const SizedBox(height: 16),
-              // --- 수정된 주소 입력 위젯 ---
               Column(
                 children: [
                   Row(
@@ -100,14 +96,13 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
                       Expanded(
                         child: TextFormField(
                           controller: _addressController,
-                          readOnly: true,
                           decoration: const InputDecoration(
                             labelText: '주소',
-                            hintText: '오른쪽 버튼으로 주소를 검색하세요.',
+                            hintText: '검색 또는 직접 입력',
                             border: OutlineInputBorder(),
                           ),
                           validator: (value) =>
-                          value!.isEmpty ? '주소를 검색해주세요.' : null,
+                          value!.isEmpty ? '주소를 입력해주세요.' : null,
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -119,12 +114,14 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
                             ),
                           );
 
-                          if (result != null && result is Map<String, dynamic>) {
+                          if (result != null &&
+                              result is Map<String, dynamic>) {
                             setState(() {
                               _addressController.text = result['address'] ?? '';
-                              // 좌표 파싱 및 저장 (문자열 -> double)
-                              _latitude = double.tryParse(result['latitude'].toString());
-                              _longitude = double.tryParse(result['longitude'].toString());
+                              _latitude =
+                                  double.tryParse(result['latitude'].toString());
+                              _longitude = double.tryParse(
+                                  result['longitude'].toString());
                             });
                           }
                         },
