@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:developer' as developer; // 상세 로그를 위해 추가
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:developer' as developer;
+import '../home/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,6 +15,41 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _rememberEmail = false;
+
+  // shared_preferences에서 데이터를 저장하고 불러오기 위한 키
+  static const String _emailPrefKey = 'saved_email';
+  static const String _rememberPrefKey = 'remember_email';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedEmail();
+  }
+
+  // 앱 시작 시 저장된 이메일 정보 불러오기
+  Future<void> _loadSavedEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    final bool rememberEmail = prefs.getBool(_rememberPrefKey) ?? false;
+    setState(() {
+      _rememberEmail = rememberEmail;
+      if (_rememberEmail) {
+        _emailController.text = prefs.getString(_emailPrefKey) ?? '';
+      }
+    });
+  }
+
+  // '아이디 기억하기' 설정 저장하기
+  Future<void> _saveEmailPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_rememberPrefKey, _rememberEmail);
+    if (_rememberEmail) {
+      await prefs.setString(_emailPrefKey, _emailController.text.trim());
+    } else {
+      // 체크 해제 시 저장된 이메일 삭제
+      await prefs.remove(_emailPrefKey);
+    }
+  }
 
   @override
   void dispose() {
@@ -22,9 +59,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _signIn() async {
-    // 키보드 숨기기
     FocusScope.of(context).unfocus();
-
     setState(() {
       _isLoading = true;
     });
@@ -34,13 +69,19 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      // 로그인 성공 시 StreamBuilder가 자동으로 화면을 전환해주므로 별도 처리가 필요 없습니다.
 
+      // 로그인 성공 시 '아이디 기억하기' 설정 저장
+      await _saveEmailPreference();
+
+      // 로그인 성공 시 홈 화면으로 이동
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
     } on FirebaseAuthException catch (e) {
       developer.log('로그인 실패: Firebase 오류 코드 - ${e.code}', name: 'LoginScreen');
-
       String errorMessage = '로그인에 실패했습니다. 다시 시도해주세요.';
-      // --- 수정된 부분: 최신 오류 코드 처리 ---
       if (e.code == 'invalid-credential') {
         errorMessage = '등록되지 않은 이메일이거나 비밀번호가 틀렸습니다.';
       } else if (e.code == 'invalid-email') {
@@ -81,35 +122,16 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.pets,
-                  size: 80,
-                  color: Color(0xFFFF7A00),
-                ),
+                const Icon(Icons.pets, size: 80, color: Color(0xFFFF7A00)),
                 const SizedBox(height: 24),
-                const Text(
-                  'CareLink',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF4A4A4A),
-                  ),
-                ),
-                const Text(
-                  '임시보호소 관리 시스템',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey,
-                  ),
-                ),
+                const Text('CareLink', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF4A4A4A))),
+                const Text('임시보호소 관리 시스템', style: TextStyle(fontSize: 16, color: Colors.grey)),
                 const SizedBox(height: 48),
                 TextField(
                   controller: _emailController,
                   decoration: InputDecoration(
                     labelText: '이메일',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   keyboardType: TextInputType.emailAddress,
                 ),
@@ -118,13 +140,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: _passwordController,
                   decoration: InputDecoration(
                     labelText: '비밀번호',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   obscureText: true,
                 ),
-                const SizedBox(height: 32),
+                // --- '아이디 기억하기' 체크박스 UI ---
+                CheckboxListTile(
+                  title: const Text('아이디 기억하기'),
+                  value: _rememberEmail,
+                  onChanged: (bool? value) {
+                    setState(() {
+                      _rememberEmail = value ?? false;
+                    });
+                  },
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -132,16 +164,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFFF7A00),
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: _isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                      '로그인',
-                      style: TextStyle(fontSize: 18, color: Colors.white),
-                    ),
+                        : const Text('로그인', style: TextStyle(fontSize: 18, color: Colors.white)),
                   ),
                 ),
               ],

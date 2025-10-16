@@ -1,3 +1,4 @@
+import 'package:carelink_app/screens/auth/login_screen.dart';
 import 'package:carelink_app/widgets/dashboard_summary_card.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -33,6 +34,18 @@ class HomeScreen extends StatelessWidget {
     }
   }
 
+  // --- 로그아웃 함수 수정 ---
+  Future<void> _signOut(BuildContext context) async {
+    await FirebaseAuth.instance.signOut();
+    if (context.mounted) {
+      // 모든 이전 화면 기록을 지우고 로그인 화면으로 이동
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+            (Route<dynamic> route) => false,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,9 +66,7 @@ class HomeScreen extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () {
-              FirebaseAuth.instance.signOut();
-            },
+            onPressed: () => _signOut(context), // 수정된 로그아웃 함수 호출
             tooltip: '로그아웃',
           ),
         ],
