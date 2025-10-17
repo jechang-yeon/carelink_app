@@ -17,7 +17,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _rememberEmail = false;
 
-  // shared_preferences에서 데이터를 저장하고 불러오기 위한 키
   static const String _emailPrefKey = 'saved_email';
   static const String _rememberPrefKey = 'remember_email';
 
@@ -27,7 +26,6 @@ class _LoginScreenState extends State<LoginScreen> {
     _loadSavedEmail();
   }
 
-  // 앱 시작 시 저장된 이메일 정보 불러오기
   Future<void> _loadSavedEmail() async {
     final prefs = await SharedPreferences.getInstance();
     final bool rememberEmail = prefs.getBool(_rememberPrefKey) ?? false;
@@ -39,14 +37,12 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
-  // '아이디 기억하기' 설정 저장하기
   Future<void> _saveEmailPreference() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_rememberPrefKey, _rememberEmail);
     if (_rememberEmail) {
       await prefs.setString(_emailPrefKey, _emailController.text.trim());
     } else {
-      // 체크 해제 시 저장된 이메일 삭제
       await prefs.remove(_emailPrefKey);
     }
   }
@@ -70,10 +66,8 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text.trim(),
       );
 
-      // 로그인 성공 시 '아이디 기억하기' 설정 저장
       await _saveEmailPreference();
 
-      // 로그인 성공 시 홈 화면으로 이동
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const HomeScreen()),
@@ -122,10 +116,29 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.pets, size: 80, color: Color(0xFFFF7A00)),
+                Image.asset(
+                  'assets/images/afa_logo.png',
+                  // --- 수정된 부분: 로고 크기 2배로 ---
+                  width: 240,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(
+                      Icons.pets,
+                      size: 80,
+                      color: Color(0xFFFF7A00),
+                    );
+                  },
+                ),
                 const SizedBox(height: 24),
-                const Text('CareLink', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF4A4A4A))),
-                const Text('임시보호소 관리 시스템', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                const Text(
+                  'CareLink',
+                  // --- 수정된 부분: 폰트 크기 약 70%로 축소 ---
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF4A4A4A)),
+                ),
+                const Text(
+                  '임시보호소 관리 시스템',
+                  // --- 수정된 부분: 폰트 크기 약 70%로 축소 ---
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
                 const SizedBox(height: 48),
                 TextField(
                   controller: _emailController,
@@ -144,7 +157,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   obscureText: true,
                 ),
-                // --- '아이디 기억하기' 체크박스 UI ---
                 CheckboxListTile(
                   title: const Text('아이디 기억하기'),
                   value: _rememberEmail,

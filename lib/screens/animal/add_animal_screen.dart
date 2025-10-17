@@ -1,8 +1,8 @@
-import 'dart:io';
+import 'dart:io';// <-- 파일 처리를 위한 필수 import 입니다.
 import 'package:carelink_app/constants/terms_content.dart';
 import 'package:carelink_app/screens/common/terms_view_screen.dart';
+import 'package:carelink_app/screens/search/address_search_screen.dart';
 import 'package:carelink_app/services/image_picker_service.dart';
-import 'package:carelink_app/widgets/address_input_field.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
@@ -23,7 +23,6 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   final List<XFile> _selectedImages = [];
   final PageController _pageController = PageController();
 
-  // Form Fields
   final _nameController = TextEditingController();
   String? _intakeType = '입소';
   String? _species = '개';
@@ -36,14 +35,12 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   final _ownerAddressController = TextEditingController();
   final _ownerAddressDetailController = TextEditingController();
 
-  // Consent states
   bool _privacyConsent = false;
   bool _shelterUseConsent = false;
   bool _fosterConsent = false;
 
   @override
   void dispose() {
-    // Dispose all controllers
     _pageController.dispose();
     _nameController.dispose();
     _weightController.dispose();
@@ -76,7 +73,6 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   void _deleteImage(int index) {
     setState(() {
       _selectedImages.removeAt(index);
-      // 페이지 뷰의 현재 페이지를 조정하여 오류 방지
       if (_selectedImages.isNotEmpty) {
         _pageController.jumpToPage(index > 0 ? index - 1 : 0);
       }
@@ -108,6 +104,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
             .collection('animals')
             .add({
           'name': _nameController.text,
+          'nameLowercase': _nameController.text.toLowerCase(),
           'intakeType': _intakeType,
           'species': _species,
           'gender': _gender,
@@ -262,10 +259,8 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                 value!.isEmpty ? '보호자 연락처를 입력해주세요.' : null,
               ),
               const SizedBox(height: 16),
-              AddressInputField(
-                mainAddressController: _ownerAddressController,
-                detailAddressController: _ownerAddressDetailController,
-              ),
+              _buildAddressInput(
+                  _ownerAddressController, _ownerAddressDetailController),
               const Divider(height: 40),
               const Text('이용 동의 (필수)',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -318,32 +313,93 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     );
   }
 
-  Widget _buildConsentTile(
-      {required String title,
-        required String content,
-        required bool value,
-        required Function(bool) onChanged}) {
+  Widget _buildConsentTile({
+    required String title,
+    required String content,
+    required bool value,
+    required Function(bool) onChanged,
+  }) {
     return Row(
       children: [
         Checkbox(
           value: value,
-          onChanged: (newValue) => onChanged(newValue!),
+          onChanged: null, // 직접 체크 불가
         ),
         Expanded(
           child: InkWell(
-            onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) =>
-                    TermsViewScreen(title: title, content: content),
-              ));
+            onTap: () async {
+              final result = await Navigator.of(context).push<bool>(
+                MaterialPageRoute(
+                  builder: (context) =>
+                      TermsViewScreen(title: title, content: content),
+                ),
+              );
+              if (result == true) {
+                onChanged(true);
+              }
             },
             child: Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 decoration: TextDecoration.underline,
-                color: Colors.blue,
+                color: value ? Colors.grey : Colors.blue,
               ),
             ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAddressInput(TextEditingController mainController,
+      TextEditingController detailController) {
+    return Column(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: mainController,
+                decoration: const InputDecoration(
+                  labelText: '주소',
+                  hintText: '검색 또는 직접 입력',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) => value!.isEmpty ? '주소를 입력해주세요.' : null,
+              ),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: () async {
+                final result = await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const AddressSearchScreen(),
+                  ),
+                );
+                if (result != null && result is Map<String, dynamic>) {
+                  setState(() {
+                    mainController.text = result['address'] ?? '';
+                  });
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
+              ),
+              child: const Text('검색'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: detailController,
+          decoration: const InputDecoration(
+            labelText: '상세 주소',
+            hintText: '동, 호수 등 상세 주소를 입력하세요.',
+            border: OutlineInputBorder(),
           ),
         ),
       ],

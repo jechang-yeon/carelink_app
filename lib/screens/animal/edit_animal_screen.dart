@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:carelink_app/constants/terms_content.dart';
 import 'package:carelink_app/screens/common/terms_view_screen.dart';
-import 'package:carelink_app/services/image_picker_service.dart';
 import 'package:carelink_app/screens/search/address_search_screen.dart';
+import 'package:carelink_app/services/image_picker_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
@@ -31,7 +31,6 @@ class _EditAnimalScreenState extends State<EditAnimalScreen> {
   late List<String> _existingImageUrls;
   final PageController _pageController = PageController();
 
-  // Form Fields
   late TextEditingController _nameController;
   late String? _status;
   late String? _intakeType;
@@ -45,7 +44,6 @@ class _EditAnimalScreenState extends State<EditAnimalScreen> {
   late TextEditingController _ownerAddressController;
   late TextEditingController _ownerAddressDetailController;
 
-  // Consent States
   late bool _privacyConsent;
   late bool _shelterUseConsent;
   late bool _fosterConsent;
@@ -53,7 +51,6 @@ class _EditAnimalScreenState extends State<EditAnimalScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize form fields with existing data
     _nameController = TextEditingController(text: widget.animal.name);
     _status = widget.animal.status;
     _intakeType = widget.animal.intakeType;
@@ -149,6 +146,7 @@ class _EditAnimalScreenState extends State<EditAnimalScreen> {
             .doc(widget.animal.id)
             .update({
           'name': _nameController.text,
+          'nameLowercase': _nameController.text.toLowerCase(),
           'status': _status,
           'intakeType': _intakeType,
           'species': _species,
@@ -318,61 +316,8 @@ class _EditAnimalScreenState extends State<EditAnimalScreen> {
                 value!.isEmpty ? '보호자 연락처를 입력해주세요.' : null,
               ),
               const SizedBox(height: 16),
-              // --- 수정된 보호자 주소 입력 위젯 ---
-              Column(
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _ownerAddressController,
-                          decoration: const InputDecoration(
-                            labelText: '주소',
-                            hintText: '검색 또는 직접 입력',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (value) =>
-                          value!.isEmpty ? '주소를 입력해주세요.' : null,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () async {
-                          final result = await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const AddressSearchScreen(),
-                            ),
-                          );
-                          if (result != null &&
-                              result is Map<String, dynamic>) {
-                            setState(() {
-                              _ownerAddressController.text =
-                                  result['address'] ?? '';
-                            });
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 16,
-                          ),
-                        ),
-                        child: const Text('검색'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _ownerAddressDetailController,
-                    decoration: const InputDecoration(
-                      labelText: '상세 주소',
-                      hintText: '동, 호수 등 상세 주소를 입력하세요.',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ],
-              ),
+              _buildAddressInput(
+                  _ownerAddressController, _ownerAddressDetailController),
               const Divider(height: 40),
               const Text('이용 동의 (필수)',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -425,32 +370,93 @@ class _EditAnimalScreenState extends State<EditAnimalScreen> {
     );
   }
 
-  Widget _buildConsentTile(
-      {required String title,
-        required String content,
-        required bool value,
-        required Function(bool) onChanged}) {
+  Widget _buildConsentTile({
+    required String title,
+    required String content,
+    required bool value,
+    required Function(bool) onChanged,
+  }) {
     return Row(
       children: [
         Checkbox(
           value: value,
-          onChanged: (newValue) => onChanged(newValue!),
+          onChanged: null,
         ),
         Expanded(
           child: InkWell(
-            onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) =>
-                    TermsViewScreen(title: title, content: content),
-              ));
+            onTap: () async {
+              final result = await Navigator.of(context).push<bool>(
+                MaterialPageRoute(
+                  builder: (context) =>
+                      TermsViewScreen(title: title, content: content),
+                ),
+              );
+              if (result == true) {
+                onChanged(true);
+              }
             },
             child: Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 decoration: TextDecoration.underline,
-                color: Colors.blue,
+                color: value ? Colors.grey : Colors.blue,
               ),
             ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAddressInput(TextEditingController mainController,
+      TextEditingController detailController) {
+    return Column(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: mainController,
+                decoration: const InputDecoration(
+                  labelText: '주소',
+                  hintText: '검색 또는 직접 입력',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) => value!.isEmpty ? '주소를 입력해주세요.' : null,
+              ),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: () async {
+                final result = await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const AddressSearchScreen(),
+                  ),
+                );
+                if (result != null && result is Map<String, dynamic>) {
+                  setState(() {
+                    mainController.text = result['address'] ?? '';
+                  });
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
+              ),
+              child: const Text('검색'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: detailController,
+          decoration: const InputDecoration(
+            labelText: '상세 주소',
+            hintText: '동, 호수 등 상세 주소를 입력하세요.',
+            border: OutlineInputBorder(),
           ),
         ),
       ],
