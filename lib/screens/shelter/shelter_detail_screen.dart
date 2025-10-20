@@ -4,9 +4,9 @@ import 'package:carelink_app/screens/animal/add_animal_screen.dart';
 import 'package:carelink_app/screens/animal/animal_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../models/shelter.dart';
-import '../../models/animal.dart';
-import '../../services/map_service.dart';
+import 'package:carelink_app/models/shelter.dart';
+import 'package:carelink_app/models/animal.dart';
+import 'package:carelink_app/services/map_service.dart';
 
 class ShelterDetailScreen extends StatefulWidget {
   final StaffModel user;
@@ -24,10 +24,27 @@ class _ShelterDetailScreenState extends State<ShelterDetailScreen> {
   String _searchQuery = '';
   Timer? _debounce;
 
+  bool _canManageAnimals = false;
+
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
+    _checkPermissions();
+  }
+
+  void _checkPermissions() {
+    final user = widget.user;
+    final shelter = widget.shelter;
+
+    if (user.role == 'SystemAdmin' ||
+        user.role == 'AreaManager' ||
+        shelter.managerUid == user.uid ||
+        shelter.staffUids.contains(user.uid)) {
+      setState(() {
+        _canManageAnimals = true;
+      });
+    }
   }
 
   @override
@@ -188,6 +205,8 @@ class _ShelterDetailScreenState extends State<ShelterDetailScreen> {
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => AnimalDetailScreen(
+                              user: widget.user,
+                              shelter: widget.shelter,
                               shelterId: widget.shelter.id,
                               animal: animal,
                             ),
@@ -202,7 +221,8 @@ class _ShelterDetailScreenState extends State<ShelterDetailScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: _canManageAnimals
+          ? FloatingActionButton(
         onPressed: () {
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -214,7 +234,8 @@ class _ShelterDetailScreenState extends State<ShelterDetailScreen> {
         backgroundColor: const Color(0xFFFF7A00),
         tooltip: '신규 동물 등록',
         child: const Icon(Icons.add, color: Colors.white),
-      ),
+      )
+          : null,
     );
   }
 }

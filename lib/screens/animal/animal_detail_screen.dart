@@ -1,3 +1,5 @@
+import 'package:carelink_app/models/shelter.dart';
+import 'package:carelink_app/models/staff_model.dart';
 import 'package:carelink_app/widgets/delete_confirmation_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -9,24 +11,55 @@ import '../../models/care_log.dart';
 import '../../widgets/add_care_log_dialog.dart';
 import 'edit_animal_screen.dart';
 
-class AnimalDetailScreen extends StatelessWidget {
+class AnimalDetailScreen extends StatefulWidget {
+  final StaffModel user;
+  final Shelter shelter;
   final String shelterId;
   final Animal animal;
-  const AnimalDetailScreen(
-      {super.key, required this.shelterId, required this.animal});
+
+  const AnimalDetailScreen({
+    super.key,
+    required this.user,
+    required this.shelter,
+    required this.shelterId,
+    required this.animal,
+  });
+
+  @override
+  State<AnimalDetailScreen> createState() => _AnimalDetailScreenState();
+}
+
+class _AnimalDetailScreenState extends State<AnimalDetailScreen> {
+  bool _canEditOrDelete = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPermissions();
+  }
+
+  void _checkPermissions() {
+    final user = widget.user;
+    final shelter = widget.shelter;
+    if (user.role == 'SystemAdmin' || shelter.managerUid == user.uid) {
+      setState(() {
+        _canEditOrDelete = true;
+      });
+    }
+  }
 
   Future<void> _deleteAnimal(BuildContext context) async {
     try {
       await FirebaseFirestore.instance
           .collection('shelters')
-          .doc(shelterId)
+          .doc(widget.shelterId)
           .collection('animals')
-          .doc(animal.id)
+          .doc(widget.animal.id)
           .delete();
       if (!context.mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${animal.name} 정보가 삭제되었습니다.')),
+        SnackBar(content: Text('${widget.animal.name} 정보가 삭제되었습니다.')),
       );
     } catch (e) {
       if (!context.mounted) return;
@@ -39,9 +72,9 @@ class AnimalDetailScreen extends StatelessWidget {
   Future<void> _sendCareUpdateToOwner(BuildContext context) async {
     final logSnapshot = await FirebaseFirestore.instance
         .collection('shelters')
-        .doc(shelterId)
+        .doc(widget.shelterId)
         .collection('animals')
-        .doc(animal.id)
+        .doc(widget.animal.id)
         .collection('careLogs')
         .orderBy('date', descending: true)
         .limit(1)
@@ -59,11 +92,11 @@ class AnimalDetailScreen extends StatelessWidget {
     final formattedDate =
     DateFormat('yyyy-MM-dd').format(latestLog.date.toDate());
     final messageContent =
-        "안녕하세요 ${animal.ownerName}님, [$formattedDate] ${animal.name}의 케어 기록입니다.\n- 오전 배식: ${latestLog.amMeal}\n- 오후 배식: ${latestLog.pmMeal}\n- 급수: ${latestLog.water}\n- 운동: ${latestLog.exercise}";
+        "안녕하세요 ${widget.animal.ownerName}님, [$formattedDate] ${widget.animal.name}의 케어 기록입니다.\n- 오전 배식: ${latestLog.amMeal}\n- 오후 배식: ${latestLog.pmMeal}\n- 급수: ${latestLog.water}\n- 운동: ${latestLog.exercise}";
 
     final Uri smsLaunchUri = Uri(
       scheme: 'sms',
-      path: animal.ownerContact,
+      path: widget.animal.ownerContact,
       queryParameters: <String, String>{
         'body': messageContent,
       },
@@ -83,38 +116,40 @@ class AnimalDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(animal.name),
+        title: Text(widget.animal.name),
         backgroundColor: const Color(0xFFFF7A00),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => EditAnimalScreen(
-                    shelterId: shelterId,
-                    animal: animal,
+          if (_canEditOrDelete)
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => EditAnimalScreen(
+                      shelterId: widget.shelterId,
+                      animal: widget.animal,
+                    ),
                   ),
-                ),
-              );
-            },
-            tooltip: '정보 수정',
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => DeleteConfirmationDialog(
-                  title: '동물 정보 삭제',
-                  content:
-                  '정말로 ${animal.name}의 정보를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
-                  onConfirm: () => _deleteAnimal(context),
-                ),
-              );
-            },
-            tooltip: '정보 삭제',
-          ),
+                );
+              },
+              tooltip: '정보 수정',
+            ),
+          if (_canEditOrDelete)
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => DeleteConfirmationDialog(
+                    title: '동물 정보 삭제',
+                    content:
+                    '정말로 ${widget.animal.name}의 정보를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
+                    onConfirm: () => _deleteAnimal(context),
+                  ),
+                );
+              },
+              tooltip: '정보 삭제',
+            ),
         ],
       ),
       body: SingleChildScrollView(
@@ -122,31 +157,25 @@ class AnimalDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (animal.photoUrls.isNotEmpty)
+            if (widget.animal.photoUrls.isNotEmpty)
               SizedBox(
-                height: 200,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: animal.photoUrls.length,
+                height: 250,
+                child: PageView.builder(
+                  itemCount: widget.animal.photoUrls.length,
                   itemBuilder: (context, index) {
                     return Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
                         child: Image.network(
-                          animal.photoUrls[index],
-                          width: 200,
-                          height: 200,
+                          widget.animal.photoUrls[index],
                           fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Icon(Icons.error, size: 40);
-                          },
+                          loadingBuilder: (context, child, progress) =>
+                          progress == null
+                              ? child
+                              : const Center(child: CircularProgressIndicator()),
+                          errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.error),
                         ),
                       ),
                     );
@@ -155,34 +184,32 @@ class AnimalDetailScreen extends StatelessWidget {
               )
             else
               Container(
-                height: 200,
+                height: 250,
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Center(
-                  child: Icon(Icons.camera_alt, color: Colors.grey, size: 50),
-                ),
+                child: const Center(child: Icon(Icons.camera_alt, color: Colors.grey, size: 60)),
               ),
             const SizedBox(height: 24),
             const Text('기본 정보',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const Divider(),
-            _buildInfoRow('현재 상태', animal.status),
-            _buildInfoRow('입소 유형', animal.intakeType),
-            _buildInfoRow('이름', animal.name),
-            _buildInfoRow('종류', animal.species),
-            _buildInfoRow('성별', animal.gender),
-            _buildInfoRow('몸무게', '${animal.weight} kg'),
-            _buildInfoRow('중성화 여부', animal.isNeutered ? '완료' : '미완료'),
-            _buildInfoRow('동물 등록 여부', animal.isRegistered ? '완료' : '미완료'),
+            _buildInfoRow('현재 상태', widget.animal.status),
+            _buildInfoRow('입소 유형', widget.animal.intakeType),
+            _buildInfoRow('이름', widget.animal.name),
+            _buildInfoRow('종류', widget.animal.species),
+            _buildInfoRow('성별', widget.animal.gender),
+            _buildInfoRow('몸무게', '${widget.animal.weight} kg'),
+            _buildInfoRow('중성화 여부', widget.animal.isNeutered ? '완료' : '미완료'),
+            _buildInfoRow('동물 등록 여부', widget.animal.isRegistered ? '완료' : '미완료'),
             const SizedBox(height: 24),
             const Text('보호자 정보',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const Divider(),
-            _buildInfoRow('이름', animal.ownerName),
-            _buildInfoRow('연락처', animal.ownerContact),
-            _buildInfoRow('주소', animal.ownerAddress),
+            _buildInfoRow('이름', widget.animal.ownerName),
+            _buildInfoRow('연락처', widget.animal.ownerContact),
+            _buildInfoRow('주소', '${widget.animal.ownerAddress} ${widget.animal.ownerAddressDetail}'),
             const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -204,9 +231,9 @@ class AnimalDetailScreen extends StatelessWidget {
             StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('shelters')
-                  .doc(shelterId)
+                  .doc(widget.shelterId)
                   .collection('animals')
-                  .doc(animal.id)
+                  .doc(widget.animal.id)
                   .collection('careLogs')
                   .orderBy('date', descending: true)
                   .snapshots(),
@@ -277,8 +304,8 @@ class AnimalDetailScreen extends StatelessWidget {
             context: context,
             builder: (context) {
               return AddCareLogDialog(
-                shelterId: shelterId,
-                animalId: animal.id,
+                shelterId: widget.shelterId,
+                animalId: widget.animal.id,
               );
             },
           );
@@ -307,3 +334,4 @@ class AnimalDetailScreen extends StatelessWidget {
     );
   }
 }
+
