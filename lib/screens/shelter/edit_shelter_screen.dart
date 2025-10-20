@@ -1,7 +1,9 @@
+import 'package:carelink_app/models/staff_model.dart';
+import 'package:carelink_app/services/user_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../models/shelter.dart';
-import '../search/address_search_screen.dart';
+import 'package:carelink_app/models/shelter.dart';
+import 'package:carelink_app/screens/search/address_search_screen.dart';
 
 class EditShelterScreen extends StatefulWidget {
   final Shelter shelter;
@@ -22,6 +24,12 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
   double? _latitude;
   double? _longitude;
 
+  // 직원 관리 로직
+  final UserService _userService = UserService();
+  List<StaffModel> _allStaff = [];
+  String? _selectedManagerUid;
+  List<String> _selectedStaffUids = [];
+
   @override
   void initState() {
     super.initState();
@@ -32,6 +40,21 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
     _status = widget.shelter.status;
     _latitude = widget.shelter.latitude;
     _longitude = widget.shelter.longitude;
+
+    _selectedManagerUid =
+    widget.shelter.managerUid.isNotEmpty ? widget.shelter.managerUid : null;
+    _selectedStaffUids = List.from(widget.shelter.staffUids);
+    _loadAllStaff();
+  }
+
+  Future<void> _loadAllStaff() async {
+    if (!mounted) return;
+    final staffList = await _userService.getAllStaff().first;
+    if (mounted) {
+      setState(() {
+        _allStaff = staffList;
+      });
+    }
   }
 
   @override
@@ -58,6 +81,8 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
           'latitude': _latitude,
           'longitude': _longitude,
           'status': _status,
+          'managerUid': _selectedManagerUid ?? '',
+          'staffUids': _selectedStaffUids,
         });
 
         if (!mounted) return;
@@ -78,6 +103,66 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
         }
       }
     }
+  }
+
+  void _showStaffSelectionDialog() {
+    List<String> tempSelectedStaff = List.from(_selectedStaffUids);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('소속 직원 선택'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: _allStaff.isEmpty
+                    ? const Center(child: Text('등록된 직원이 없습니다.'))
+                    : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _allStaff.length,
+                  itemBuilder: (context, index) {
+                    final staff = _allStaff[index];
+                    if (staff.uid == _selectedManagerUid) {
+                      return const SizedBox.shrink();
+                    }
+                    return CheckboxListTile(
+                      title: Text(staff.name),
+                      subtitle: Text(staff.email),
+                      value: tempSelectedStaff.contains(staff.uid),
+                      onChanged: (isSelected) {
+                        setDialogState(() {
+                          if (isSelected == true) {
+                            tempSelectedStaff.add(staff.uid);
+                          } else {
+                            tempSelectedStaff.remove(staff.uid);
+                          }
+                        });
+                      },
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('취소'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedStaffUids = tempSelectedStaff;
+                    });
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('확인'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -175,10 +260,47 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
                 ))
                     .toList(),
                 onChanged: (value) {
-                  _status = value!;
+                  setState(() {
+                    _status = value!;
+                  });
                 },
               ),
-              const SizedBox(height: 24),
+              const Divider(height: 40),
+              const Text('담당자 지정',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                // --- 수정: value -> initialValue ---
+                initialValue: _selectedManagerUid,
+                hint: const Text('책임자를 선택하세요'),
+                decoration: const InputDecoration(
+                  labelText: '보호소 책임자',
+                  border: OutlineInputBorder(),
+                ),
+                items: _allStaff
+                    .map((staff) => DropdownMenuItem(
+                  value: staff.uid,
+                  child: Text('${staff.name} (${staff.email})'),
+                ))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedManagerUid = value;
+                    _selectedStaffUids.remove(value);
+                  });
+                },
+                validator: (value) => value == null ? '책임자를 지정해주세요.' : null,
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: _showStaffSelectionDialog,
+                icon: const Icon(Icons.group_add),
+                label: Text('소속 직원 선택 (${_selectedStaffUids.length}명)'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                ),
+              ),
+              const SizedBox(height: 40),
               ElevatedButton(
                 onPressed: _isLoading ? null : _updateShelter,
                 style: ElevatedButton.styleFrom(

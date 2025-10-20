@@ -4,10 +4,12 @@ class Shelter {
   final String id;
   final String name;
   final String address;
-  final String addressDetail; // 상세 주소
-  final double? latitude;      // 위도
-  final double? longitude;     // 경도
+  final String addressDetail;
+  final double? latitude;
+  final double? longitude;
   final String status;
+  final String managerUid; // 보호소 책임자 UID
+  final List<String> staffUids; // 소속 직원 UID 목록
   final Timestamp createdAt;
 
   Shelter({
@@ -18,6 +20,8 @@ class Shelter {
     this.latitude,
     this.longitude,
     required this.status,
+    required this.managerUid,
+    required this.staffUids,
     required this.createdAt,
   });
 
@@ -31,6 +35,8 @@ class Shelter {
       latitude: (data['latitude'] as num?)?.toDouble(),
       longitude: (data['longitude'] as num?)?.toDouble(),
       status: data['status'] ?? '운영중',
+      managerUid: data['managerUid'] ?? '',
+      staffUids: List<String>.from(data['staffUids'] ?? []),
       createdAt: data['createdAt'] ?? Timestamp.now(),
     );
   }

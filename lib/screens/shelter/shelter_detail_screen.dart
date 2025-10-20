@@ -1,3 +1,5 @@
+import 'dart:async'; // --- 추가: Timer 클래스를 사용하기 위한 import ---
+import 'package:carelink_app/models/staff_model.dart';
 import 'package:carelink_app/screens/animal/add_animal_screen.dart';
 import 'package:carelink_app/screens/animal/animal_detail_screen.dart';
 import 'package:flutter/material.dart';
@@ -6,40 +8,51 @@ import '../../models/shelter.dart';
 import '../../models/animal.dart';
 import '../../services/map_service.dart';
 
-// --- StatefulWidget으로 변경 ---
 class ShelterDetailScreen extends StatefulWidget {
+  final StaffModel user;
   final Shelter shelter;
 
-  const ShelterDetailScreen({super.key, required this.shelter});
+  const ShelterDetailScreen(
+      {super.key, required this.user, required this.shelter});
 
   @override
   State<ShelterDetailScreen> createState() => _ShelterDetailScreenState();
 }
 
 class _ShelterDetailScreenState extends State<ShelterDetailScreen> {
-  // --- 검색 기능에 필요한 변수 추가 ---
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text;
-      });
-    });
+    _searchController.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
+    _debounce?.cancel();
     super.dispose();
+  }
+
+  void _onSearchChanged() {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        setState(() {
+          _searchQuery = _searchController.text;
+        });
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final mapUrl = (widget.shelter.latitude != null && widget.shelter.longitude != null)
+    final mapUrl =
+    (widget.shelter.latitude != null && widget.shelter.longitude != null)
         ? MapService.getStaticMapUrl(
       latitude: widget.shelter.latitude!,
       longitude: widget.shelter.longitude!,
@@ -72,7 +85,6 @@ class _ShelterDetailScreenState extends State<ShelterDetailScreen> {
               color: Colors.grey[200],
               child: const Center(child: Text('위치 정보가 없습니다.')),
             ),
-
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -103,7 +115,6 @@ class _ShelterDetailScreenState extends State<ShelterDetailScreen> {
             ),
           ),
           const Divider(height: 1),
-          // --- 검색창 UI 추가 ---
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
@@ -135,13 +146,14 @@ class _ShelterDetailScreenState extends State<ShelterDetailScreen> {
           ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              // --- 검색 쿼리에 따라 Firestore 쿼리 변경 ---
               stream: FirebaseFirestore.instance
                   .collection('shelters')
                   .doc(widget.shelter.id)
                   .collection('animals')
-                  .where('name', isGreaterThanOrEqualTo: _searchQuery)
-                  .where('name', isLessThanOrEqualTo: '$_searchQuery\uf8ff')
+                  .where('nameLowercase',
+                  isGreaterThanOrEqualTo: _searchQuery.toLowerCase())
+                  .where('nameLowercase',
+                  isLessThanOrEqualTo: '${_searchQuery.toLowerCase()}\uf8ff')
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -194,7 +206,8 @@ class _ShelterDetailScreenState extends State<ShelterDetailScreen> {
         onPressed: () {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => AddAnimalScreen(shelterId: widget.shelter.id),
+              builder: (context) =>
+                  AddAnimalScreen(shelterId: widget.shelter.id),
             ),
           );
         },
