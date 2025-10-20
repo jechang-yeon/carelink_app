@@ -1,4 +1,4 @@
-import 'dart:async'; // --- 추가: Timer 클래스를 사용하기 위한 import ---
+import 'dart:async';
 import 'package:carelink_app/models/staff_model.dart';
 import 'package:carelink_app/screens/animal/add_animal_screen.dart';
 import 'package:carelink_app/screens/animal/animal_detail_screen.dart';

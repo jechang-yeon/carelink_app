@@ -31,6 +31,7 @@ class AnimalDetailScreen extends StatefulWidget {
 
 class _AnimalDetailScreenState extends State<AnimalDetailScreen> {
   bool _canEditOrDelete = false;
+  bool _canPerformActions = false;
 
   @override
   void initState() {
@@ -42,10 +43,14 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen> {
     final user = widget.user;
     final shelter = widget.shelter;
     if (user.role == 'SystemAdmin' || shelter.managerUid == user.uid) {
-      setState(() {
-        _canEditOrDelete = true;
-      });
+      _canEditOrDelete = true;
     }
+    if (_canEditOrDelete ||
+        user.role == 'AreaManager' ||
+        shelter.staffUids.contains(user.uid)) {
+      _canPerformActions = true;
+    }
+    setState(() {});
   }
 
   Future<void> _deleteAnimal(BuildContext context) async {
@@ -217,14 +222,12 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen> {
                 const Text('데일리 케어 기록',
                     style:
                     TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                TextButton.icon(
-                  onPressed: () => _sendCareUpdateToOwner(context),
-                  icon: const Icon(Icons.send, size: 18),
-                  label: const Text('알림 전송'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Theme.of(context).primaryColor,
+                if (_canPerformActions)
+                  TextButton.icon(
+                    onPressed: () => _sendCareUpdateToOwner(context),
+                    icon: const Icon(Icons.send, size: 18),
+                    label: const Text('알림 전송'),
                   ),
-                )
               ],
             ),
             const Divider(),
@@ -298,7 +301,8 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: _canPerformActions
+          ? FloatingActionButton(
         onPressed: () {
           showDialog(
             context: context,
@@ -313,7 +317,8 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen> {
         backgroundColor: const Color(0xFFFF7A00),
         tooltip: '케어 기록 추가',
         child: const Icon(Icons.note_add, color: Colors.white),
-      ),
+      )
+          : null,
     );
   }
 
