@@ -1,3 +1,4 @@
+import 'package:carelink_app/services/map_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../search/address_search_screen.dart';
@@ -17,6 +18,7 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
   String _status = '운영중';
   bool _isLoading = false;
 
+  // 좌표 저장을 위한 변수
   double? _latitude;
   double? _longitude;
 
@@ -33,15 +35,30 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
       setState(() {
         _isLoading = true;
       });
+
+      // 만약 좌표가 없고(주소 검색을 안했고) 주소 텍스트만 있다면,
+      // 지오코딩 API를 통해 주소를 좌표로 변환 시도
+      if ((_latitude == null || _longitude == null) &&
+          _addressController.text.isNotEmpty) {
+        final coords =
+        await MapService.getCoordinatesFromAddress(_addressController.text);
+        if (coords != null) {
+          _latitude = coords['latitude'];
+          _longitude = coords['longitude'];
+        }
+      }
+
       try {
         await FirebaseFirestore.instance.collection('shelters').add({
           'name': _nameController.text,
           'address': _addressController.text,
           'addressDetail': _addressDetailController.text,
-          'latitude': _latitude,
-          'longitude': _longitude,
+          'latitude': _latitude, // 위도 저장
+          'longitude': _longitude, // 경도 저장
           'status': _status,
           'createdAt': Timestamp.now(),
+          'managerUid': '', // 초기에는 담당자 없음
+          'staffUids': [], // 초기에는 소속 직원 없음
         });
 
         if (!mounted) return;
@@ -82,7 +99,6 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
                 controller: _nameController,
                 decoration: const InputDecoration(
                   labelText: '보호소 이름',
-                  border: OutlineInputBorder(),
                 ),
                 validator: (value) =>
                 value!.isEmpty ? '보호소 이름을 입력해주세요.' : null,
@@ -99,7 +115,6 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
                           decoration: const InputDecoration(
                             labelText: '주소',
                             hintText: '검색 또는 직접 입력',
-                            border: OutlineInputBorder(),
                           ),
                           validator: (value) =>
                           value!.isEmpty ? '주소를 입력해주세요.' : null,
@@ -125,12 +140,6 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
                             });
                           }
                         },
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 16,
-                          ),
-                        ),
                         child: const Text('검색'),
                       ),
                     ],
@@ -141,7 +150,6 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
                     decoration: const InputDecoration(
                       labelText: '상세 주소',
                       hintText: '동, 호수 등 상세 주소를 입력하세요.',
-                      border: OutlineInputBorder(),
                     ),
                   ),
                 ],
@@ -151,7 +159,6 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
                 initialValue: _status,
                 decoration: const InputDecoration(
                   labelText: '운영 상태',
-                  border: OutlineInputBorder(),
                 ),
                 items: ['운영중', '종료']
                     .map((label) => DropdownMenuItem(
@@ -166,18 +173,16 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _isLoading ? null : _saveShelter,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF7A00),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
                 child: _isLoading
-                    ? const CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ? const SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 3,
+                  ),
                 )
-                    : const Text(
-                  '등록하기',
-                  style: TextStyle(fontSize: 18, color: Colors.white),
-                ),
+                    : const Text('등록하기'),
               ),
             ],
           ),

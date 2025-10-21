@@ -6,9 +6,10 @@ class DashboardSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // main.dart에 정의된 CardTheme을 자동으로 적용받음
     return Card(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -25,12 +26,16 @@ class DashboardSummaryCard extends StatelessWidget {
               FirebaseFirestore.instance.collectionGroup('animals').snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16.0),
+                        child: CircularProgressIndicator(),
+                      ));
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return const Center(
                       child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24.0),
+                        padding: EdgeInsets.symmetric(vertical: 16.0),
                         child: Text('보호중인 동물이 없습니다.'),
                       ));
                 }
@@ -48,18 +53,22 @@ class DashboardSummaryCard extends StatelessWidget {
                   children: [
                     _buildStatItem(
                       icon: Icons.inventory_2_outlined,
+                      label: '전체',
                       count: totalAnimals,
                     ),
                     _buildStatItem(
                       icon: Icons.pets_outlined,
+                      label: '개',
                       count: dogs,
                     ),
                     _buildStatItem(
                       icon: Icons.sentiment_very_satisfied_outlined,
+                      label: '고양이',
                       count: cats,
                     ),
                     _buildStatItem(
                       icon: Icons.favorite_border,
+                      label: '기타',
                       count: others,
                     ),
                   ],
@@ -72,8 +81,10 @@ class DashboardSummaryCard extends StatelessWidget {
     );
   }
 
+  // 통계 항목 UI를 만드는 헬퍼 위젯
   Widget _buildStatItem({
     required IconData icon,
+    required String label,
     required int count,
   }) {
     return Column(
@@ -85,6 +96,14 @@ class DashboardSummaryCard extends StatelessWidget {
           style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Color(0xFF8A8A8E),
           ),
         ),
       ],

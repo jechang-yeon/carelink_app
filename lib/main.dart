@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:google_fonts/google_fonts.dart'; // Google Fonts 패키지 import
+import 'package:google_fonts/google_fonts.dart';
 import 'firebase_options.dart';
 import 'screens/splash/splash_screen.dart';
 
@@ -22,7 +22,6 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primaryColor: const Color(0xFFFF7A00),
         scaffoldBackgroundColor: const Color(0xFFF5F5F7),
-        // --- 수정 1: Pretendard -> Noto Sans KR ---
         fontFamily: GoogleFonts.notoSansKr().fontFamily,
         appBarTheme: const AppBarTheme(
           foregroundColor: Colors.white,
@@ -38,7 +37,6 @@ class MyApp extends StatelessWidget {
             borderSide: const BorderSide(color: Color(0xFFFF7A00)),
           ),
           labelStyle: const TextStyle(color: Color(0xFF8A8A8E)),
-          // --- 수정 3 & 4: MaterialState -> WidgetState ---
           prefixIconColor: WidgetStateColor.resolveWith((states) =>
           states.contains(WidgetState.focused)
               ? const Color(0xFFFF7A00)
@@ -58,13 +56,14 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-        // --- 수정 2: CardTheme -> CardThemeData ---
+        // --- 수정된 부분: CardTheme -> CardThemeData ---
         cardTheme: CardThemeData(
-          elevation: 2,
+          elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Color(0xFFE5E5E5)),
           ),
-          margin: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 8.0),
+          margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
         ),
       ),
       home: const SplashScreen(),

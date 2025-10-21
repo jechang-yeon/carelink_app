@@ -4,12 +4,12 @@ class Shelter {
   final String id;
   final String name;
   final String address;
-  final String addressDetail;
-  final double? latitude;
-  final double? longitude;
+  final String addressDetail; // 상세 주소
+  final double? latitude;      // 위도
+  final double? longitude;     // 경도
   final String status;
-  final String managerUid; // 보호소 책임자 UID
-  final List<String> staffUids; // 소속 직원 UID 목록
+  final String managerUid;
+  final List<String> staffUids;
   final Timestamp createdAt;
 
   Shelter({
