@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../models/staff_model.dart';
+import 'package:carelink_app/models/staff_model.dart';
 
 class EditStaffScreen extends StatefulWidget {
   final StaffModel staff;
@@ -71,7 +71,6 @@ class _EditStaffScreenState extends State<EditStaffScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('직원 정보 수정'),
-        backgroundColor: const Color(0xFFFF7A00),
       ),
       body: Form(
         key: _formKey,
@@ -80,47 +79,69 @@ class _EditStaffScreenState extends State<EditStaffScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: '이름'),
-                validator: (value) => value!.isEmpty ? '이름을 입력해주세요.' : null,
-              ),
-              const SizedBox(height: 16),
-              // 이메일은 고유 ID이므로 수정 불가, 확인용으로만 표시
-              TextFormField(
-                initialValue: widget.staff.email,
-                decoration: const InputDecoration(labelText: '이메일 (수정 불가)'),
-                readOnly: true,
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                // --- 수정: value -> initialValue ---
-                initialValue: _selectedRole,
-                decoration: const InputDecoration(labelText: '기본 역할'),
-                items: ['SystemAdmin', 'AreaManager', 'ShelterManager', 'ShelterStaff', 'Viewer']
-                    .map((role) => DropdownMenuItem(
-                  value: role,
-                  child: Text(role),
-                ))
-                    .toList(),
-                onChanged: (value) {
-                  // --- 수정: setState 제거 ---
-                  _selectedRole = value!;
-                },
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: const InputDecoration(
+                          labelText: '이름',
+                          prefixIcon: Icon(Icons.person_outline),
+                        ),
+                        validator: (value) =>
+                        value!.isEmpty ? '이름을 입력해주세요.' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        initialValue: widget.staff.email,
+                        decoration: const InputDecoration(
+                          labelText: '이메일 (수정 불가)',
+                          prefixIcon: Icon(Icons.email_outlined),
+                        ),
+                        readOnly: true,
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedRole,
+                        decoration: const InputDecoration(
+                          labelText: '기본 역할',
+                          prefixIcon: Icon(Icons.security_outlined),
+                        ),
+                        items: [
+                          'SystemAdmin',
+                          'AreaManager',
+                          'ShelterManager',
+                          'ShelterStaff',
+                          'Viewer'
+                        ]
+                            .map((role) => DropdownMenuItem(
+                          value: role,
+                          child: Text(role),
+                        ))
+                            .toList(),
+                        onChanged: (value) {
+                          _selectedRole = value!;
+                        },
+                      ),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _isLoading ? null : _updateStaff,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF7A00),
-                  padding: const EdgeInsets.symmetric(vertical: 16.0),
-                ),
                 child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                  '수정 완료',
-                  style: TextStyle(fontSize: 18, color: Colors.white),
-                ),
+                    ? const SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 3,
+                  ),
+                )
+                    : const Text('수정 완료'),
               ),
             ],
           ),

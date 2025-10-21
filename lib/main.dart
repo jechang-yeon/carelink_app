@@ -56,12 +56,12 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-        // --- 수정된 부분: CardTheme -> CardThemeData ---
+        // --- 수정된 카드 테마 ---
         cardTheme: CardThemeData(
-          elevation: 0,
+          elevation: 0, // 그림자 제거
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Color(0xFFE5E5E5)),
+            side: const BorderSide(color: Color(0xFFE5E5E5)), // 얇은 테두리 추가
           ),
           margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
         ),

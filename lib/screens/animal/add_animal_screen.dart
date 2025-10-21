@@ -159,141 +159,170 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildPhotoUploader(),
-              const SizedBox(height: 24),
-              const Text('동물 정보',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: _intakeType,
-                decoration: const InputDecoration(labelText: '입소 유형'),
-                items: ['입소', '구조']
-                    .map((label) => DropdownMenuItem(
-                  value: label,
-                  child: Text(label),
-                ))
-                    .toList(),
-                onChanged: (value) {
-                  _intakeType = value;
-                },
+              _buildSectionCard(
+                title: '사진 등록',
+                child: _buildPhotoUploader(),
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: '이름'),
-                validator: (value) =>
-                value!.isEmpty ? '이름을 입력해주세요.' : null,
+              _buildSectionCard(
+                title: '동물 정보',
+                child: Column(
+                  children: [
+                    DropdownButtonFormField<String>(
+                      initialValue: _intakeType,
+                      decoration: const InputDecoration(labelText: '입소 유형', prefixIcon: Icon(Icons.input_outlined)),
+                      items: ['입소', '구조']
+                          .map((label) => DropdownMenuItem(
+                        value: label,
+                        child: Text(label),
+                      ))
+                          .toList(),
+                      onChanged: (value) {
+                        _intakeType = value;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(labelText: '이름', prefixIcon: Icon(Icons.badge_outlined)),
+                      validator: (value) =>
+                      value!.isEmpty ? '이름을 입력해주세요.' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _species,
+                            decoration: const InputDecoration(labelText: '종류', prefixIcon: Icon(Icons.pets_outlined)),
+                            items: ['개', '고양이', '기타']
+                                .map((label) => DropdownMenuItem(
+                              value: label,
+                              child: Text(label),
+                            ))
+                                .toList(),
+                            onChanged: (value) {
+                              _species = value;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _gender,
+                            decoration: const InputDecoration(labelText: '성별', prefixIcon: Icon(Icons.wc_outlined)),
+                            hint: const Text('선택'),
+                            items: ['수컷', '암컷']
+                                .map((label) => DropdownMenuItem(
+                              value: label,
+                              child: Text(label),
+                            ))
+                                .toList(),
+                            onChanged: (value) {
+                              _gender = value;
+                            },
+                            validator: (value) =>
+                            value == null ? '선택해주세요.' : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _weightController,
+                      decoration: const InputDecoration(labelText: '몸무게 (kg)', prefixIcon: Icon(Icons.scale_outlined)),
+                      keyboardType: TextInputType.number,
+                      validator: (value) =>
+                      value!.isEmpty ? '몸무게를 입력해주세요.' : null,
+                    ),
+                    const SizedBox(height: 8),
+                    CheckboxListTile(
+                      title: const Text('중성화 여부'),
+                      value: _isNeutered,
+                      onChanged: (value) {
+                        setState(() {
+                          _isNeutered = value!;
+                        });
+                      },
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    CheckboxListTile(
+                      title: const Text('동물 등록 여부'),
+                      value: _isRegistered,
+                      onChanged: (value) {
+                        setState(() {
+                          _isRegistered = value!;
+                        });
+                      },
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: _species,
-                decoration: const InputDecoration(labelText: '종류'),
-                items: ['개', '고양이', '기타']
-                    .map((label) => DropdownMenuItem(
-                  value: label,
-                  child: Text(label),
-                ))
-                    .toList(),
-                onChanged: (value) {
-                  _species = value;
-                },
+              _buildSectionCard(
+                title: '보호자 정보',
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: _ownerNameController,
+                      decoration: const InputDecoration(labelText: '보호자 이름', prefixIcon: Icon(Icons.person_outline)),
+                      validator: (value) =>
+                      value!.isEmpty ? '보호자 이름을 입력해주세요.' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _ownerContactController,
+                      decoration: const InputDecoration(labelText: '보호자 연락처', prefixIcon: Icon(Icons.phone_outlined)),
+                      keyboardType: TextInputType.phone,
+                      validator: (value) =>
+                      value!.isEmpty ? '보호자 연락처를 입력해주세요.' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildAddressInput(
+                        _ownerAddressController, _ownerAddressDetailController),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: _gender,
-                decoration: const InputDecoration(labelText: '성별'),
-                hint: const Text('성별을 선택하세요'),
-                items: ['수컷', '암컷']
-                    .map((label) => DropdownMenuItem(
-                  value: label,
-                  child: Text(label),
-                ))
-                    .toList(),
-                onChanged: (value) {
-                  _gender = value;
-                },
-                validator: (value) => value == null ? '성별을 선택해주세요.' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _weightController,
-                decoration: const InputDecoration(labelText: '몸무게 (kg)'),
-                keyboardType: TextInputType.number,
-                validator: (value) =>
-                value!.isEmpty ? '몸무게를 입력해주세요.' : null,
-              ),
-              CheckboxListTile(
-                title: const Text('중성화 여부'),
-                value: _isNeutered,
-                onChanged: (value) {
-                  setState(() {
-                    _isNeutered = value!;
-                  });
-                },
-              ),
-              CheckboxListTile(
-                title: const Text('동물 등록 여부'),
-                value: _isRegistered,
-                onChanged: (value) {
-                  setState(() {
-                    _isRegistered = value!;
-                  });
-                },
-              ),
-              const Divider(height: 40),
-              const Text('보호자 정보',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _ownerNameController,
-                decoration: const InputDecoration(labelText: '보호자 이름'),
-                validator: (value) =>
-                value!.isEmpty ? '보호자 이름을 입력해주세요.' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _ownerContactController,
-                decoration: const InputDecoration(labelText: '보호자 연락처'),
-                keyboardType: TextInputType.phone,
-                validator: (value) =>
-                value!.isEmpty ? '보호자 연락처를 입력해주세요.' : null,
-              ),
-              const SizedBox(height: 16),
-              _buildAddressInput(
-                  _ownerAddressController, _ownerAddressDetailController),
-              const Divider(height: 40),
-              const Text('이용 동의 (필수)',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              _buildConsentTile(
-                title: TermsContent.privacyTitle,
-                content: TermsContent.privacyContent,
-                value: _privacyConsent,
-                onChanged: (newValue) {
-                  setState(() {
-                    _privacyConsent = newValue;
-                  });
-                },
-              ),
-              _buildConsentTile(
-                title: TermsContent.shelterUseTitle,
-                content: TermsContent.shelterUseContent,
-                value: _shelterUseConsent,
-                onChanged: (newValue) {
-                  setState(() {
-                    _shelterUseConsent = newValue;
-                  });
-                },
-              ),
-              _buildConsentTile(
-                title: TermsContent.fosterTitle,
-                content: TermsContent.fosterContent,
-                value: _fosterConsent,
-                onChanged: (newValue) {
-                  setState(() {
-                    _fosterConsent = newValue;
-                  });
-                },
+              _buildSectionCard(
+                title: '이용 동의 (필수)',
+                child: Column(
+                  children: [
+                    _buildConsentTile(
+                      title: TermsContent.privacyTitle,
+                      content: TermsContent.privacyContent,
+                      value: _privacyConsent,
+                      onChanged: (newValue) {
+                        setState(() {
+                          _privacyConsent = newValue;
+                        });
+                      },
+                    ),
+                    _buildConsentTile(
+                      title: TermsContent.shelterUseTitle,
+                      content: TermsContent.shelterUseContent,
+                      value: _shelterUseConsent,
+                      onChanged: (newValue) {
+                        setState(() {
+                          _shelterUseConsent = newValue;
+                        });
+                      },
+                    ),
+                    _buildConsentTile(
+                      title: TermsContent.fosterTitle,
+                      content: TermsContent.fosterContent,
+                      value: _fosterConsent,
+                      onChanged: (newValue) {
+                        setState(() {
+                          _fosterConsent = newValue;
+                        });
+                      },
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 24),
               ElevatedButton(
@@ -316,6 +345,22 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     );
   }
 
+  Widget _buildSectionCard({required String title, required Widget child}) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildConsentTile({
     required String title,
     required String content,
@@ -326,7 +371,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
       children: [
         Checkbox(
           value: value,
-          onChanged: null, // 직접 체크 불가
+          onChanged: null,
         ),
         Expanded(
           child: InkWell(
@@ -345,7 +390,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
               title,
               style: TextStyle(
                 decoration: TextDecoration.underline,
-                color: value ? Colors.grey : Colors.blue,
+                color: value ? const Color(0xFF8A8A8E) : Colors.blue,
               ),
             ),
           ),
@@ -367,6 +412,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                 decoration: const InputDecoration(
                   labelText: '주소',
                   hintText: '검색 또는 직접 입력',
+                  prefixIcon: Icon(Icons.home_outlined),
                 ),
                 validator: (value) => value!.isEmpty ? '주소를 입력해주세요.' : null,
               ),
@@ -386,17 +432,18 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                 }
               },
               style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16)),
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12)),
               child: const Text('검색'),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
         TextFormField(
           controller: detailController,
           decoration: const InputDecoration(
             labelText: '상세 주소',
-            hintText: '동, 호수 등 상세 주소를 입력하세요.',
+            hintText: '동, 호수 등',
+            prefixIcon: Icon(Icons.location_on_outlined),
           ),
         ),
       ],
@@ -405,6 +452,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
 
   Widget _buildPhotoUploader() {
     return Stack(
+      alignment: Alignment.center,
       children: [
         Container(
           height: 250,
@@ -416,70 +464,75 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
           child: _selectedImages.isEmpty
               ? const Center(
             child:
-            Text('사진을 등록해주세요.', style: TextStyle(color: Colors.grey)),
+            Text('사진을 등록해주세요.', style: TextStyle(color: Color(0xFF8A8A8E))),
           )
               : PageView.builder(
             controller: _pageController,
             itemCount: _selectedImages.length,
             itemBuilder: (context, index) {
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.file(
-                      File(_selectedImages[index].path),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: CircleAvatar(
-                      radius: 18,
-                      backgroundColor: Colors.black.withAlpha(153),
-                      child: IconButton(
-                        icon: const Icon(Icons.delete,
-                            color: Colors.white, size: 18),
-                        onPressed: () => _deleteImage(index),
-                      ),
-                    ),
-                  ),
-                ],
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  File(_selectedImages[index].path),
+                  fit: BoxFit.cover,
+                ),
               );
             },
           ),
         ),
         Positioned(
-          top: 8,
-          right: 8,
+          bottom: 12,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(
+              _selectedImages.length,
+                  (index) => Container(
+                width: 8.0,
+                height: 8.0,
+                margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  // --- 수정: withOpacity -> withAlpha ---
+                  color: (Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : Colors.black)
+                      .withAlpha(_pageController.hasClients && _pageController.page?.round() == index ? 230 : 102),
+                ),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 12,
+          right: 12,
           child: Column(
             children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.black.withAlpha(153),
-                child: IconButton(
-                  icon: const Icon(Icons.photo_library,
-                      color: Colors.white, size: 18),
-                  onPressed: () => _pickImages(ImageSource.gallery),
-                  tooltip: '갤러리에서 선택',
-                ),
-              ),
+              _buildPickerButton(Icons.photo_library_outlined, () => _pickImages(ImageSource.gallery), '갤러리'),
               const SizedBox(height: 8),
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.black.withAlpha(153),
-                child: IconButton(
-                  icon:
-                  const Icon(Icons.camera_alt, color: Colors.white, size: 18),
-                  onPressed: () => _pickImages(ImageSource.camera),
-                  tooltip: '카메라로 촬영',
-                ),
-              ),
+              _buildPickerButton(Icons.camera_alt_outlined, () => _pickImages(ImageSource.camera), '카메라'),
             ],
           ),
         ),
+        if(_selectedImages.isNotEmpty)
+          Positioned(
+            top: 12,
+            left: 12,
+            child: _buildPickerButton(Icons.delete_outline, () => _deleteImage(_pageController.page?.round() ?? 0), '삭제'),
+          ),
       ],
+    );
+  }
+
+  Widget _buildPickerButton(IconData icon, VoidCallback onPressed, String tooltip) {
+    return CircleAvatar(
+      radius: 20,
+      // --- 수정: withOpacity -> withAlpha ---
+      backgroundColor: Colors.black.withAlpha(153),
+      child: IconButton(
+        icon: Icon(icon, color: Colors.white, size: 20),
+        onPressed: onPressed,
+        tooltip: tooltip,
+      ),
     );
   }
 }

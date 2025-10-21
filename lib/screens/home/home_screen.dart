@@ -193,6 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // --- 수정된 대시보드 콘텐츠 ---
   Widget _buildDashboardContent() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,6 +283,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showManagementMenu(BuildContext context, Shelter shelter) {
     showModalBottomSheet(
       context: context,
+      shape: const RoundedRectangleBorder( // 모서리 둥글게
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (context) {
         return Wrap(
           children: <Widget>[
@@ -313,6 +317,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
+            const SizedBox(height: 16),
           ],
         );
       },

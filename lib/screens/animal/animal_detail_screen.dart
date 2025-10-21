@@ -102,9 +102,7 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen> {
     final Uri smsLaunchUri = Uri(
       scheme: 'sms',
       path: widget.animal.ownerContact,
-      queryParameters: <String, String>{
-        'body': messageContent,
-      },
+      queryParameters: <String, String>{'body': messageContent},
     );
 
     if (await canLaunchUrl(smsLaunchUri)) {
@@ -120,117 +118,171 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.animal.name),
-        backgroundColor: const Color(0xFFFF7A00),
-        actions: [
-          if (_canEditOrDelete)
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => EditAnimalScreen(
-                      shelterId: widget.shelterId,
-                      animal: widget.animal,
-                    ),
-                  ),
-                );
-              },
-              tooltip: '정보 수정',
-            ),
-          if (_canEditOrDelete)
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => DeleteConfirmationDialog(
-                    title: '동물 정보 삭제',
-                    content:
-                    '정말로 ${widget.animal.name}의 정보를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
-                    onConfirm: () => _deleteAnimal(context),
-                  ),
-                );
-              },
-              tooltip: '정보 삭제',
-            ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (widget.animal.photoUrls.isNotEmpty)
-              SizedBox(
-                height: 250,
-                child: PageView.builder(
-                  itemCount: widget.animal.photoUrls.length,
-                  itemBuilder: (context, index) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          widget.animal.photoUrls[index],
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, progress) =>
-                          progress == null
-                              ? child
-                              : const Center(child: CircularProgressIndicator()),
-                          errorBuilder: (context, error, stackTrace) =>
-                          const Icon(Icons.error),
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 250.0,
+            floating: false,
+            pinned: true,
+            backgroundColor: const Color(0xFF4A4A4A),
+            actions: [
+              if (_canEditOrDelete)
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => EditAnimalScreen(
+                          shelterId: widget.shelterId,
+                          animal: widget.animal,
                         ),
                       ),
                     );
                   },
+                  tooltip: '정보 수정',
                 ),
-              )
-            else
-              Container(
-                height: 250,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(12),
+              if (_canEditOrDelete)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => DeleteConfirmationDialog(
+                        title: '동물 정보 삭제',
+                        content:
+                        '정말로 ${widget.animal.name}의 정보를 삭제하시겠습니까?',
+                        onConfirm: () => _deleteAnimal(context),
+                      ),
+                    );
+                  },
+                  tooltip: '정보 삭제',
                 ),
-                child: const Center(child: Icon(Icons.camera_alt, color: Colors.grey, size: 60)),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              title: Text(
+                widget.animal.name,
+                style: const TextStyle(fontSize: 16, color: Colors.white),
               ),
-            const SizedBox(height: 24),
-            const Text('기본 정보',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const Divider(),
-            _buildInfoRow('현재 상태', widget.animal.status),
-            _buildInfoRow('입소 유형', widget.animal.intakeType),
-            _buildInfoRow('이름', widget.animal.name),
-            _buildInfoRow('종류', widget.animal.species),
-            _buildInfoRow('성별', widget.animal.gender),
-            _buildInfoRow('몸무게', '${widget.animal.weight} kg'),
-            _buildInfoRow('중성화 여부', widget.animal.isNeutered ? '완료' : '미완료'),
-            _buildInfoRow('동물 등록 여부', widget.animal.isRegistered ? '완료' : '미완료'),
-            const SizedBox(height: 24),
-            const Text('보호자 정보',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const Divider(),
-            _buildInfoRow('이름', widget.animal.ownerName),
-            _buildInfoRow('연락처', widget.animal.ownerContact),
-            _buildInfoRow('주소', '${widget.animal.ownerAddress} ${widget.animal.ownerAddressDetail}'),
-            const SizedBox(height: 24),
+              background: widget.animal.photoUrls.isNotEmpty
+                  ? Image.network(
+                widget.animal.photoUrls.first,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) =>
+                    _buildPlaceholderImage(),
+              )
+                  : _buildPlaceholderImage(),
+            ),
+          ),
+          SliverList(
+            delegate: SliverChildListDelegate([
+              _buildInfoCard(
+                title: '기본 정보',
+                children: [
+                  _buildInfoRow('현재 상태', widget.animal.status),
+                  _buildInfoRow('입소 유형', widget.animal.intakeType),
+                  _buildInfoRow('종류', widget.animal.species),
+                  _buildInfoRow('성별', widget.animal.gender),
+                  _buildInfoRow('몸무게', '${widget.animal.weight} kg'),
+                  _buildInfoRow(
+                      '중성화 여부', widget.animal.isNeutered ? '완료' : '미완료'),
+                  _buildInfoRow(
+                      '동물 등록 여부', widget.animal.isRegistered ? '완료' : '미완료'),
+                ],
+              ),
+              _buildInfoCard(
+                title: '보호자 정보',
+                children: [
+                  _buildInfoRow('이름', widget.animal.ownerName),
+                  _buildInfoRow('연락처', widget.animal.ownerContact),
+                  _buildInfoRow(
+                      '주소',
+                      '${widget.animal.ownerAddress} ${widget.animal.ownerAddressDetail}'),
+                ],
+              ),
+              _buildCareLogSection(),
+            ]),
+          ),
+        ],
+      ),
+      floatingActionButton: _canPerformActions
+          ? FloatingActionButton(
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (context) => AddCareLogDialog(
+              shelterId: widget.shelterId,
+              animalId: widget.animal.id,
+            ),
+          );
+        },
+        tooltip: '케어 기록 추가',
+        child: const Icon(Icons.note_add_outlined),
+      )
+          : null,
+    );
+  }
+
+  Widget _buildPlaceholderImage() {
+    return Container(
+      color: Colors.grey[300],
+      child:
+      const Center(child: Icon(Icons.pets, size: 80, color: Colors.white)),
+    );
+  }
+
+  Widget _buildInfoCard({required String title, required List<Widget> children}) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title,
+                style:
+                const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Divider(height: 24),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Color(0xFF8A8A8E))),
+          Text(value),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCareLogSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('데일리 케어 기록',
                     style:
-                    TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 if (_canPerformActions)
                   TextButton.icon(
                     onPressed: () => _sendCareUpdateToOwner(context),
-                    icon: const Icon(Icons.send, size: 18),
+                    icon: const Icon(Icons.send_outlined, size: 18),
                     label: const Text('알림 전송'),
                   ),
               ],
             ),
-            const Divider(),
+            const Divider(height: 24),
             StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('shelters')
@@ -239,6 +291,7 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen> {
                   .doc(widget.animal.id)
                   .collection('careLogs')
                   .orderBy('date', descending: true)
+                  .limit(10)
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -249,49 +302,43 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen> {
                     child: Padding(
                       padding: EdgeInsets.symmetric(vertical: 24.0),
                       child: Text('아직 케어 기록이 없습니다.',
-                          style: TextStyle(color: Colors.grey)),
+                          style: TextStyle(color: Color(0xFF8A8A8E))),
                     ),
                   );
                 }
-
                 final careLogs = snapshot.data!.docs
                     .map((doc) => CareLog.fromFirestore(doc))
                     .toList();
-
-                return ListView.builder(
+                return ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: careLogs.length,
+                  separatorBuilder: (context, index) => const Divider(),
                   itemBuilder: (context, index) {
                     final log = careLogs[index];
                     final formattedDate =
                     DateFormat('yyyy-MM-dd').format(log.date.toDate());
-                    return Card(
-                      margin: const EdgeInsets.only(top: 8),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(formattedDate,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16)),
-                                Text(log.recordedByEmail,
-                                    style: const TextStyle(
-                                        color: Colors.grey, fontSize: 12)),
-                              ],
-                            ),
-                            const Divider(),
-                            Text('오전 배식: ${log.amMeal}'),
-                            Text('오후 배식: ${log.pmMeal}'),
-                            Text('급수: ${log.water}'),
-                            Text('운동: ${log.exercise}'),
-                          ],
-                        ),
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(formattedDate,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold)),
+                              Text(log.recordedByEmail,
+                                  style: const TextStyle(
+                                      color: Color(0xFF8A8A8E), fontSize: 12)),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text('오전: ${log.amMeal} / 오후: ${log.pmMeal}'),
+                          Text('급수: ${log.water}'),
+                          Text('운동: ${log.exercise}'),
+                        ],
                       ),
                     );
                   },
@@ -300,41 +347,6 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen> {
             ),
           ],
         ),
-      ),
-      floatingActionButton: _canPerformActions
-          ? FloatingActionButton(
-        onPressed: () {
-          showDialog(
-            context: context,
-            builder: (context) {
-              return AddCareLogDialog(
-                shelterId: widget.shelterId,
-                animalId: widget.animal.id,
-              );
-            },
-          );
-        },
-        backgroundColor: const Color(0xFFFF7A00),
-        tooltip: '케어 기록 추가',
-        child: const Icon(Icons.note_add, color: Colors.white),
-      )
-          : null,
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label,
-              style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black54)),
-          Text(value, style: const TextStyle(fontSize: 16)),
-        ],
       ),
     );
   }

@@ -1,4 +1,6 @@
+import 'package:carelink_app/models/staff_model.dart';
 import 'package:carelink_app/services/map_service.dart';
+import 'package:carelink_app/services/user_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/shelter.dart';
@@ -20,9 +22,13 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
   late String _status;
   bool _isLoading = false;
 
-  // 좌표 저장을 위한 변수
   double? _latitude;
   double? _longitude;
+
+  final UserService _userService = UserService();
+  List<StaffModel> _allStaff = [];
+  String? _selectedManagerUid;
+  List<String> _selectedStaffUids = [];
 
   @override
   void initState() {
@@ -34,6 +40,21 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
     _status = widget.shelter.status;
     _latitude = widget.shelter.latitude;
     _longitude = widget.shelter.longitude;
+
+    _selectedManagerUid =
+    widget.shelter.managerUid.isNotEmpty ? widget.shelter.managerUid : null;
+    _selectedStaffUids = List.from(widget.shelter.staffUids);
+    _loadAllStaff();
+  }
+
+  Future<void> _loadAllStaff() async {
+    if (!mounted) return;
+    final staffList = await _userService.getAllStaff().first;
+    if (mounted) {
+      setState(() {
+        _allStaff = staffList;
+      });
+    }
   }
 
   @override
@@ -50,7 +71,6 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
         _isLoading = true;
       });
 
-      // 만약 주소 텍스트가 변경되었는데 좌표 정보가 없다면, 지오코딩 재시도
       if (_addressController.text.isNotEmpty && (_latitude == null || _longitude == null)) {
         final coords =
         await MapService.getCoordinatesFromAddress(_addressController.text);
@@ -71,6 +91,8 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
           'latitude': _latitude,
           'longitude': _longitude,
           'status': _status,
+          'managerUid': _selectedManagerUid ?? '',
+          'staffUids': _selectedStaffUids,
         });
 
         if (!mounted) return;
@@ -93,12 +115,71 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
     }
   }
 
+  void _showStaffSelectionDialog() {
+    List<String> tempSelectedStaff = List.from(_selectedStaffUids);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('소속 직원 선택'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: _allStaff.isEmpty
+                    ? const Center(child: Text('등록된 직원이 없습니다.'))
+                    : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _allStaff.length,
+                  itemBuilder: (context, index) {
+                    final staff = _allStaff[index];
+                    if (staff.uid == _selectedManagerUid) {
+                      return const SizedBox.shrink();
+                    }
+                    return CheckboxListTile(
+                      title: Text(staff.name),
+                      subtitle: Text(staff.email),
+                      value: tempSelectedStaff.contains(staff.uid),
+                      onChanged: (isSelected) {
+                        setDialogState(() {
+                          if (isSelected == true) {
+                            tempSelectedStaff.add(staff.uid);
+                          } else {
+                            tempSelectedStaff.remove(staff.uid);
+                          }
+                        });
+                      },
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('취소'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedStaffUids = tempSelectedStaff;
+                    });
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('확인'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('보호소 정보 수정'),
-        backgroundColor: const Color(0xFFFF7A00),
       ),
       body: Form(
         key: _formKey,
@@ -107,79 +188,97 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: '보호소 이름',
-                ),
-                validator: (value) =>
-                value!.isEmpty ? '보호소 이름을 입력해주세요.' : null,
-              ),
-              const SizedBox(height: 16),
-              Column(
-                children: [
-                  Row(
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _addressController,
-                          decoration: const InputDecoration(
-                            labelText: '주소',
-                            hintText: '검색 또는 직접 입력',
-                          ),
-                          validator: (value) =>
-                          value!.isEmpty ? '주소를 입력해주세요.' : null,
+                      const Text('보호소 정보',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: const InputDecoration(
+                          labelText: '보호소 이름',
+                          prefixIcon: Icon(Icons.home_work_outlined),
                         ),
+                        validator: (value) =>
+                        value!.isEmpty ? '보호소 이름을 입력해주세요.' : null,
                       ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () async {
-                          final result = await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const AddressSearchScreen(),
-                            ),
-                          );
-                          if (result != null &&
-                              result is Map<String, dynamic>) {
-                            setState(() {
-                              _addressController.text = result['address'] ?? '';
-                              _latitude = double.tryParse(
-                                  result['latitude'].toString());
-                              _longitude = double.tryParse(
-                                  result['longitude'].toString());
-                            });
-                          }
+                      const SizedBox(height: 16),
+                      _buildAddressInput(
+                          _addressController, _addressDetailController),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        initialValue: _status,
+                        decoration: const InputDecoration(
+                          labelText: '운영 상태',
+                          prefixIcon: Icon(Icons.power_settings_new_outlined),
+                        ),
+                        items: ['운영중', '종료']
+                            .map((label) => DropdownMenuItem(
+                          value: label,
+                          child: Text(label),
+                        ))
+                            .toList(),
+                        onChanged: (value) {
+                          _status = value!;
                         },
-                        child: const Text('검색'),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _addressDetailController,
-                    decoration: const InputDecoration(
-                      labelText: '상세 주소',
-                      hintText: '동, 호수 등 상세 주소를 입력하세요.',
-                    ),
-                  ),
-                ],
+                ),
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: _status,
-                decoration: const InputDecoration(
-                  labelText: '운영 상태',
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('담당자 지정',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        // --- 수정: value -> initialValue ---
+                        initialValue: _selectedManagerUid,
+                        hint: const Text('책임자를 선택하세요'),
+                        decoration: const InputDecoration(
+                          labelText: '보호소 책임자',
+                          prefixIcon: Icon(Icons.person_pin_outlined),
+                        ),
+                        items: _allStaff
+                            .map((staff) => DropdownMenuItem(
+                          value: staff.uid,
+                          child: Text('${staff.name} (${staff.email})'),
+                        ))
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedManagerUid = value;
+                            _selectedStaffUids.remove(value);
+                          });
+                        },
+                        validator: (value) =>
+                        value == null ? '책임자를 지정해주세요.' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      OutlinedButton.icon(
+                        onPressed: _showStaffSelectionDialog,
+                        icon: const Icon(Icons.group_add_outlined),
+                        label: Text('소속 직원 선택 (${_selectedStaffUids.length}명)'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 50),
+                          alignment: Alignment.centerLeft,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                items: ['운영중', '종료']
-                    .map((label) => DropdownMenuItem(
-                  value: label,
-                  child: Text(label),
-                ))
-                    .toList(),
-                onChanged: (value) {
-                  _status = value!;
-                },
               ),
               const SizedBox(height: 24),
               ElevatedButton(
@@ -199,6 +298,61 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildAddressInput(TextEditingController mainController,
+      TextEditingController detailController) {
+    return Column(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: mainController,
+                decoration: const InputDecoration(
+                  labelText: '주소',
+                  hintText: '검색 또는 직접 입력',
+                  prefixIcon: Icon(Icons.map_outlined),
+                ),
+                validator: (value) => value!.isEmpty ? '주소를 입력해주세요.' : null,
+              ),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: () async {
+                final result = await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const AddressSearchScreen(),
+                  ),
+                );
+                if (result != null && result is Map<String, dynamic>) {
+                  setState(() {
+                    mainController.text = result['address'] ?? '';
+                    _latitude =
+                        double.tryParse(result['latitude'].toString());
+                    _longitude =
+                        double.tryParse(result['longitude'].toString());
+                  });
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16)),
+              child: const Text('검색'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          controller: detailController,
+          decoration: const InputDecoration(
+            labelText: '상세 주소',
+            hintText: '동, 호수 등',
+            prefixIcon: Icon(Icons.location_on_outlined),
+          ),
+        ),
+      ],
     );
   }
 }

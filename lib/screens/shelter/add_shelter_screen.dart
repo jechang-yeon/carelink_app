@@ -18,7 +18,6 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
   String _status = '운영중';
   bool _isLoading = false;
 
-  // 좌표 저장을 위한 변수
   double? _latitude;
   double? _longitude;
 
@@ -36,8 +35,6 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
         _isLoading = true;
       });
 
-      // 만약 좌표가 없고(주소 검색을 안했고) 주소 텍스트만 있다면,
-      // 지오코딩 API를 통해 주소를 좌표로 변환 시도
       if ((_latitude == null || _longitude == null) &&
           _addressController.text.isNotEmpty) {
         final coords =
@@ -53,12 +50,12 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
           'name': _nameController.text,
           'address': _addressController.text,
           'addressDetail': _addressDetailController.text,
-          'latitude': _latitude, // 위도 저장
-          'longitude': _longitude, // 경도 저장
+          'latitude': _latitude,
+          'longitude': _longitude,
           'status': _status,
           'createdAt': Timestamp.now(),
-          'managerUid': '', // 초기에는 담당자 없음
-          'staffUids': [], // 초기에는 소속 직원 없음
+          'managerUid': '',
+          'staffUids': [],
         });
 
         if (!mounted) return;
@@ -86,7 +83,6 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('신규 보호소 개설'),
-        backgroundColor: const Color(0xFFFF7A00),
       ),
       body: Form(
         key: _formKey,
@@ -95,80 +91,48 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: '보호소 이름',
-                ),
-                validator: (value) =>
-                value!.isEmpty ? '보호소 이름을 입력해주세요.' : null,
-              ),
-              const SizedBox(height: 16),
-              Column(
-                children: [
-                  Row(
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _addressController,
-                          decoration: const InputDecoration(
-                            labelText: '주소',
-                            hintText: '검색 또는 직접 입력',
-                          ),
-                          validator: (value) =>
-                          value!.isEmpty ? '주소를 입력해주세요.' : null,
+                      const Text('보호소 정보',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: const InputDecoration(
+                          labelText: '보호소 이름',
+                          prefixIcon: Icon(Icons.home_work_outlined),
                         ),
+                        validator: (value) =>
+                        value!.isEmpty ? '보호소 이름을 입력해주세요.' : null,
                       ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () async {
-                          final result = await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const AddressSearchScreen(),
-                            ),
-                          );
-
-                          if (result != null &&
-                              result is Map<String, dynamic>) {
-                            setState(() {
-                              _addressController.text = result['address'] ?? '';
-                              _latitude =
-                                  double.tryParse(result['latitude'].toString());
-                              _longitude = double.tryParse(
-                                  result['longitude'].toString());
-                            });
-                          }
+                      const SizedBox(height: 16),
+                      _buildAddressInput(
+                          _addressController, _addressDetailController),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        initialValue: _status,
+                        decoration: const InputDecoration(
+                          labelText: '운영 상태',
+                          prefixIcon: Icon(Icons.power_settings_new_outlined),
+                        ),
+                        items: ['운영중', '종료']
+                            .map((label) => DropdownMenuItem(
+                          value: label,
+                          child: Text(label),
+                        ))
+                            .toList(),
+                        onChanged: (value) {
+                          _status = value!;
                         },
-                        child: const Text('검색'),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _addressDetailController,
-                    decoration: const InputDecoration(
-                      labelText: '상세 주소',
-                      hintText: '동, 호수 등 상세 주소를 입력하세요.',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: _status,
-                decoration: const InputDecoration(
-                  labelText: '운영 상태',
                 ),
-                items: ['운영중', '종료']
-                    .map((label) => DropdownMenuItem(
-                  value: label,
-                  child: Text(label),
-                ))
-                    .toList(),
-                onChanged: (value) {
-                  _status = value!;
-                },
               ),
               const SizedBox(height: 24),
               ElevatedButton(
@@ -188,6 +152,60 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildAddressInput(TextEditingController mainController,
+      TextEditingController detailController) {
+    return Column(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: mainController,
+                decoration: const InputDecoration(
+                  labelText: '주소',
+                  hintText: '검색 또는 직접 입력',
+                  prefixIcon: Icon(Icons.map_outlined),
+                ),
+                validator: (value) => value!.isEmpty ? '주소를 입력해주세요.' : null,
+              ),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: () async {
+                final result = await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const AddressSearchScreen(),
+                  ),
+                );
+                if (result != null && result is Map<String, dynamic>) {
+                  setState(() {
+                    mainController.text = result['address'] ?? '';
+                    _latitude = double.tryParse(result['latitude'].toString());
+                    _longitude =
+                        double.tryParse(result['longitude'].toString());
+                  });
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16)),
+              child: const Text('검색'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          controller: detailController,
+          decoration: const InputDecoration(
+            labelText: '상세 주소',
+            hintText: '동, 호수 등',
+            prefixIcon: Icon(Icons.location_on_outlined),
+          ),
+        ),
+      ],
     );
   }
 }

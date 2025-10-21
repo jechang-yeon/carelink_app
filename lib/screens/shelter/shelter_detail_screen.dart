@@ -73,151 +73,148 @@ class _ShelterDetailScreenState extends State<ShelterDetailScreen> {
         ? MapService.getStaticMapUrl(
       latitude: widget.shelter.latitude!,
       longitude: widget.shelter.longitude!,
+      height: 300,
     )
         : null;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.shelter.name),
-        backgroundColor: const Color(0xFFFF7A00),
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (mapUrl != null)
-            Image.network(
-              mapUrl,
-              height: 250,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                height: 250,
-                color: Colors.grey[200],
-                child: const Center(child: Text('지도를 불러올 수 없습니다.')),
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 250.0,
+            floating: false,
+            pinned: true,
+            backgroundColor: const Color(0xFF4A4A4A),
+            flexibleSpace: FlexibleSpaceBar(
+              title: Text(
+                widget.shelter.name,
+                style: const TextStyle(fontSize: 16, color: Colors.white),
               ),
-            )
-          else
-            Container(
-              height: 250,
-              color: Colors.grey[200],
-              child: const Center(child: Text('위치 정보가 없습니다.')),
+              background: mapUrl != null
+                  ? Image.network(
+                mapUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: Colors.grey[300],
+                  child: const Center(
+                      child:
+                      Text('지도를 불러올 수 없습니다.', style: TextStyle(color: Colors.white70))),
+                ),
+              )
+                  : Container(
+                color: Colors.grey[300],
+                child: const Center(
+                    child: Text('위치 정보가 없습니다.', style: TextStyle(color: Colors.white70))),
+              ),
             ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.shelter.name,
-                  style: const TextStyle(
-                      fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${widget.shelter.address} ${widget.shelter.addressDetail}',
-                  style: const TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '상태: ${widget.shelter.status}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: widget.shelter.status == '운영중'
-                        ? Colors.green
-                        : Colors.red,
-                    fontWeight: FontWeight.bold,
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${widget.shelter.address} ${widget.shelter.addressDetail}',
+                    style: const TextStyle(fontSize: 16, color: Color(0xFF8A8A8E)),
                   ),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                labelText: '동물 이름으로 검색',
-                hintText: '이름을 입력하세요...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.0),
-                ),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    _searchController.clear();
-                  },
-                )
-                    : null,
+                  const SizedBox(height: 8),
+                  Text(
+                    '상태: ${widget.shelter.status}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: widget.shelter.status == '운영중'
+                          ? Colors.green.shade700
+                          : Colors.red.shade700,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: '동물 이름으로 검색...',
+                      prefixIcon: const Icon(Icons.search_outlined),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                        },
+                      )
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    '보호중인 동물',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0),
-            child: Text(
-              '보호중인 동물 목록',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('shelters')
-                  .doc(widget.shelter.id)
-                  .collection('animals')
-                  .where('nameLowercase',
-                  isGreaterThanOrEqualTo: _searchQuery.toLowerCase())
-                  .where('nameLowercase',
-                  isLessThanOrEqualTo: '${_searchQuery.toLowerCase()}\uf8ff')
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return Center(
-                    child: Text(
-                      _searchQuery.isEmpty
-                          ? '아직 등록된 동물이 없습니다.'
-                          : '검색 결과가 없습니다.',
-                      style: TextStyle(color: Colors.grey[600]),
+          // --- 수정: StreamBuilder로 실제 동물 목록 표시 ---
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('shelters')
+                .doc(widget.shelter.id)
+                .collection('animals')
+                .where('nameLowercase', isGreaterThanOrEqualTo: _searchQuery.toLowerCase())
+                .where('nameLowercase', isLessThanOrEqualTo: '${_searchQuery.toLowerCase()}\uf8ff')
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SliverToBoxAdapter(
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return SliverToBoxAdapter(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Text(
+                        _searchQuery.isEmpty ? '아직 등록된 동물이 없습니다.' : '검색 결과가 없습니다.',
+                        style: const TextStyle(color: Color(0xFF8A8A8E)),
+                      ),
                     ),
-                  );
-                }
+                  ),
+                );
+              }
 
-                final animals = snapshot.data!.docs
-                    .map((doc) => Animal.fromFirestore(doc))
-                    .toList();
+              final animals = snapshot.data!.docs.map((doc) => Animal.fromFirestore(doc)).toList();
 
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  itemCount: animals.length,
-                  itemBuilder: (context, index) {
+              return SliverList(
+                delegate: SliverChildBuilderDelegate(
+                      (context, index) {
                     final animal = animals[index];
-                    return ListTile(
-                      leading: const Icon(Icons.pets),
-                      title: Text(animal.name),
-                      subtitle: Text('${animal.species} / ${animal.gender}'),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => AnimalDetailScreen(
-                              user: widget.user,
-                              shelter: widget.shelter,
-                              shelterId: widget.shelter.id,
-                              animal: animal,
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      child: ListTile(
+                        leading: const Icon(Icons.pets_outlined, color: Color(0xFF8A8A8E)),
+                        title: Text(animal.name),
+                        subtitle: Text('${animal.species} / ${animal.gender}'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFF8A8A8E)),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => AnimalDetailScreen(
+                                user: widget.user,
+                                shelter: widget.shelter,
+                                shelterId: widget.shelter.id,
+                                animal: animal,
+                              ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     );
                   },
-                );
-              },
-            ),
+                  childCount: animals.length,
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -231,9 +228,8 @@ class _ShelterDetailScreenState extends State<ShelterDetailScreen> {
             ),
           );
         },
-        backgroundColor: const Color(0xFFFF7A00),
         tooltip: '신규 동물 등록',
-        child: const Icon(Icons.add, color: Colors.white),
+        child: const Icon(Icons.add),
       )
           : null,
     );
