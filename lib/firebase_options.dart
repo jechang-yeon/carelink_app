@@ -85,4 +85,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'carelink-app-v2.firebasestorage.app',
     measurementId: 'G-MCEQ7RKCS3',
   );
+
 }
