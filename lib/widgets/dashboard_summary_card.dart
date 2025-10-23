@@ -9,8 +9,8 @@ class DashboardSummaryCard extends StatelessWidget {
   DashboardSummaryCard({
     super.key,
     this.padding = const EdgeInsets.all(24.0),
-    this.title = '운영 현황 요약',
-    this.description = '등록된 보호소와 보호 동물 현황을 한눈에 살펴보세요.',
+    this.title = '운영 현황',
+    this.description,
     this.emptyMessage = '아직 등록된 보호소가 없습니다. 새로운 보호소를 추가해보세요.',
     this.metricTileMinWidth = 220,
     this.maxColumns = 3,
@@ -452,6 +452,7 @@ String? _normalizeText(String? value) {
 
   return trimmed;
 }
+
 
 
 

@@ -10,7 +10,6 @@ import 'package:carelink_app/screens/shelter/add_shelter_screen.dart';
 import 'package:carelink_app/screens/shelter/edit_shelter_screen.dart';
 import 'package:carelink_app/screens/shelter/shelter_detail_screen.dart';
 import 'package:carelink_app/services/shelter_service.dart';
-import 'package:carelink_app/widgets/dashboard_summary_card.dart';
 import 'package:carelink_app/widgets/delete_confirmation_dialog.dart';
 import 'package:carelink_app/widgets/responsive_layout.dart';
 import 'package:carelink_app/widgets/shelter_filter_bar.dart';
@@ -135,9 +134,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Scaffold _buildMobileLayout(BuildContext context) {
+    final Color titleColor = _resolveDashboardTitleColor(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('케어링크 대시보드'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        toolbarHeight: kToolbarHeight + 12.0,
+        iconTheme: IconThemeData(color: titleColor),
+        actionsIconTheme: IconThemeData(color: titleColor),
+        title: Padding(
+          padding: const EdgeInsets.only(top: 8.0),
+          child: _buildDashboardAppBarTitle(context),
+        ),
         actions: _buildAppBarActions(context),
       ),
       body: _buildDashboardContent(),
@@ -215,34 +224,82 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildDashboardAppBarTitle(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final TextStyle baseStyle = theme.appBarTheme.titleTextStyle ??
+        theme.textTheme.titleLarge ??
+        const TextStyle(fontSize: 20, fontWeight: FontWeight.w600);
+    final double baseFontSize = baseStyle.fontSize ?? 20;
+    final double scaledFontSize = baseFontSize * 1.1;
+
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: 'CareLink ',
+            style: baseStyle.copyWith(
+              fontSize: scaledFontSize,
+              fontWeight: FontWeight.w300,
+            ),
+          ),
+          TextSpan(
+            text: 'Dashboard',
+            style: baseStyle.copyWith(
+              fontSize: scaledFontSize,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _resolveDashboardTitleColor(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final TextStyle baseStyle = theme.appBarTheme.titleTextStyle ??
+        theme.textTheme.titleLarge ??
+        const TextStyle(fontSize: 20, fontWeight: FontWeight.w600);
+    return baseStyle.color ?? theme.colorScheme.onSurface;
+  }
+
   List<Widget> _buildAppBarActions(BuildContext context) {
+    const EdgeInsets padding = EdgeInsets.only(top: 8.0);
     return [
       if (widget.user.role == 'SystemAdmin')
-        IconButton(
-          icon: const Icon(Icons.manage_accounts_outlined),
+        Padding(
+          padding: padding,
+          child: IconButton(
+            icon: const Icon(Icons.manage_accounts_outlined),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                    builder: (context) => const StaffManagementScreen()),
+              );
+            },
+            tooltip: '직원 관리',
+          ),
+        ),
+      Padding(
+        padding: padding,
+        child: IconButton(
+          icon: const Icon(Icons.receipt_long_outlined),
           onPressed: () {
             Navigator.of(context).push(
               MaterialPageRoute(
-                  builder: (context) => const StaffManagementScreen()),
+                builder: (context) => const ActivityLogScreen(),
+              ),
             );
           },
-          tooltip: '직원 관리',
+          tooltip: '전체 활동 기록',
         ),
-      IconButton(
-        icon: const Icon(Icons.receipt_long_outlined),
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const ActivityLogScreen(),
-            ),
-          );
-        },
-        tooltip: '전체 활동 기록',
       ),
-      IconButton(
-        icon: const Icon(Icons.logout_outlined),
-        onPressed: () => _signOut(context),
-        tooltip: '로그아웃',
+      Padding(
+        padding: padding,
+        child: IconButton(
+          icon: const Icon(Icons.logout_outlined),
+          onPressed: () => _signOut(context),
+          tooltip: '로그아웃',
+        ),
       ),
     ];
   }
@@ -269,11 +326,14 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const SizedBox(height: 16),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0.0),
-          child: DashboardSummaryCard(),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Divider(
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         Expanded(
           child: StreamBuilder<ShelterListState>(
             stream: _shelterService.watchShelters(
@@ -303,8 +363,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
               final bool filtersActive =
                   _searchQuery.isNotEmpty || _statusFilter != null;
-              final bool showFilteredChip =
-                  state.isFiltered || filtersActive;
 
               Widget listContent;
               if (snapshot.hasError) {
@@ -466,12 +524,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 24.0,
-                      vertical: 8.0,
+                      vertical: 4.0,
                     ),
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      crossAxisAlignment: WrapCrossAlignment.center,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
                           '보호소 목록',
@@ -480,14 +536,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Chip(
-                          label: Text('총 ${state.totalCount}곳'),
+                        const SizedBox(height: 8),
+                        Divider(
+                          color:
+                          Theme.of(context).colorScheme.outlineVariant,
                         ),
-                        if (showFilteredChip)
-                          Chip(
-                            backgroundColor: const Color(0xFFFFF3E0),
-                            label: Text('필터 결과 ${state.filteredCount}곳'),
-                          ),
                       ],
                     ),
                   ),
@@ -501,6 +554,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+
+
 
 
 
