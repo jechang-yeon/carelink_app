@@ -36,9 +36,14 @@ class MyApp extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             borderSide: const BorderSide(color: Color(0xFFFF7A00)),
           ),
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 14,
+          ),
           labelStyle: const TextStyle(color: Color(0xFF8A8A8E)),
-          prefixIconColor: WidgetStateColor.resolveWith(
-                (states) => states.contains(WidgetState.focused)
+          prefixIconColor: MaterialStateColor.resolveWith(
+                (states) => states.contains(MaterialState.focused)
                 ? const Color(0xFFFF7A00)
                 : const Color(0xFF8A8A8E),
           ),
@@ -70,4 +75,7 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+
+
 
