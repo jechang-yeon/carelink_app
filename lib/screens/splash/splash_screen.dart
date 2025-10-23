@@ -1,6 +1,12 @@
 import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
+import '../../models/staff_model.dart';
+import '../../services/user_service.dart';
 import '../auth/login_screen.dart';
+import '../home/home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -10,18 +16,54 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  final UserService _userService = UserService();
+
   @override
   void initState() {
     super.initState();
-    // --- 수정된 부분: 3초 -> 5초 ---
-    // 5초 후에 LoginScreen 화면으로 이동
-    Timer(const Duration(seconds: 5), () {
-      if (mounted) {
+    unawaited(_prepareInitialRoute());
+  }
+
+  Future<void> _prepareInitialRoute() async {
+    try {
+      // 인증 상태 확인과 최소 표시 시간을 병렬로 진행해 사용자의 체감 대기 시간을 줄입니다.
+      final Future<StaffModel?> staffFuture = _loadCurrentStaff();
+      await Future<void>.delayed(const Duration(milliseconds: 800));
+      final StaffModel? staff = await staffFuture;
+
+      if (!mounted) {
+        return;
+      }
+
+      if (staff != null) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => HomeScreen(user: staff)),
+        );
+      } else {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const LoginScreen()),
         );
       }
-    });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('초기화 중 오류가 발생했습니다: $error')),
+      );
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
+    }
+  }
+
+  Future<StaffModel?> _loadCurrentStaff() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return null;
+    }
+
+    return _userService.getCurrentUserModel();
   }
 
   @override
@@ -72,3 +114,4 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 }
+

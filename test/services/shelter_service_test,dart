@@ -1,0 +1,119 @@
+import 'package:carelink_app/models/shelter.dart';
+import 'package:carelink_app/models/shelter_list_state.dart';
+import 'package:carelink_app/services/shelter_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+Shelter _createShelter({
+  required String id,
+  required String name,
+  required String address,
+  String addressDetail = '',
+  String status = '운영중',
+}) {
+  return Shelter(
+    id: id,
+    name: name,
+    address: address,
+    addressDetail: addressDetail,
+    latitude: null,
+    longitude: null,
+    status: status,
+    managerUid: 'manager-$id',
+    staffUids: const <String>[],
+    createdAt: Timestamp.fromMillisecondsSinceEpoch(0),
+  );
+}
+
+void main() {
+  group('ShelterService.buildShelterListState', () {
+    test('기본 상태에서는 전체 보호소와 상태 목록을 반환한다', () {
+      final List<Shelter> shelters = <Shelter>[
+        _createShelter(
+          id: '1',
+          name: '서울 보호소',
+          address: '서울시 중구',
+          status: '운영중',
+        ),
+        _createShelter(
+          id: '2',
+          name: '부산 보호소',
+          address: '부산시 해운대구',
+          status: '점검중',
+        ),
+      ];
+
+      final ShelterListState state = ShelterService.buildShelterListState(shelters);
+
+      expect(state.totalCount, 2);
+      expect(state.filteredCount, 2);
+      expect(state.hasShelters, isTrue);
+      expect(state.isFiltered, isFalse);
+      expect(
+        state.availableStatuses,
+        <String>['전체', '운영중', '점검중'],
+      );
+    });
+
+    test('검색어는 이름과 주소·상세주소에서 대소문자 구분 없이 필터링한다', () {
+      final List<Shelter> shelters = <Shelter>[
+        _createShelter(
+          id: '1',
+          name: '강원 사랑 보호소',
+          address: '강릉시 교1동',
+        ),
+        _createShelter(
+          id: '2',
+          name: '제주 케어 센터',
+          address: '제주시 애월읍',
+          addressDetail: '한담리 123',
+        ),
+      ];
+
+      final ShelterListState state = ShelterService.buildShelterListState(
+        shelters,
+        searchQuery: '애월',
+      );
+
+      expect(state.totalCount, 2);
+      expect(state.filteredCount, 1);
+      expect(state.shelters.single.id, '2');
+      expect(state.isFiltered, isTrue);
+    });
+
+    test('상태 필터가 지정되면 해당 상태만 반환한다', () {
+      final List<Shelter> shelters = <Shelter>[
+        _createShelter(id: '1', name: '서울', address: '서울', status: '운영중'),
+        _createShelter(id: '2', name: '부산', address: '부산', status: '신규 준비'),
+        _createShelter(id: '3', name: '대구', address: '대구', status: '운영중'),
+      ];
+
+      final ShelterListState state = ShelterService.buildShelterListState(
+        shelters,
+        statusFilter: '운영중',
+      );
+
+      expect(state.filteredCount, 2);
+      expect(state.shelters.map((Shelter s) => s.id), <String>['1', '3']);
+      expect(state.availableStatuses.contains('신규 준비'), isTrue);
+    });
+
+    test('검색과 상태 필터가 동시에 적용되면 교집합만 남긴다', () {
+      final List<Shelter> shelters = <Shelter>[
+        _createShelter(id: '1', name: '서울 해피', address: '서울시', status: '운영중'),
+        _createShelter(id: '2', name: '서울 드림', address: '서울시 중랑구', status: '점검중'),
+        _createShelter(id: '3', name: '부산 케어', address: '부산시 해운대구', status: '운영중'),
+      ];
+
+      final ShelterListState state = ShelterService.buildShelterListState(
+        shelters,
+        searchQuery: '서울',
+        statusFilter: '운영중',
+      );
+
+      expect(state.filteredCount, 1);
+      expect(state.shelters.single.id, '1');
+      expect(state.isFiltered, isTrue);
+    });
+  });
+}

@@ -1,21 +1,26 @@
+import 'dart:async';
+
+import 'package:carelink_app/models/shelter.dart';
+import 'package:carelink_app/models/shelter_list_state.dart';
 import 'package:carelink_app/models/staff_model.dart';
 import 'package:carelink_app/screens/admin/staff_management_screen.dart';
 import 'package:carelink_app/screens/auth/login_screen.dart';
-import 'package:carelink_app/widgets/dashboard_summary_card.dart';
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:carelink_app/models/shelter.dart';
-import 'package:carelink_app/widgets/delete_confirmation_dialog.dart';
-import 'package:carelink_app/widgets/responsive_layout.dart';
+import 'package:carelink_app/screens/logs/activity_log_screen.dart';
 import 'package:carelink_app/screens/shelter/add_shelter_screen.dart';
 import 'package:carelink_app/screens/shelter/edit_shelter_screen.dart';
 import 'package:carelink_app/screens/shelter/shelter_detail_screen.dart';
-import 'package:carelink_app/screens/logs/activity_log_screen.dart';
+import 'package:carelink_app/services/shelter_service.dart';
+import 'package:carelink_app/widgets/dashboard_summary_card.dart';
+import 'package:carelink_app/widgets/delete_confirmation_dialog.dart';
+import 'package:carelink_app/widgets/responsive_layout.dart';
+import 'package:carelink_app/widgets/shelter_filter_bar.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 class HomeScreen extends StatefulWidget {
-  final StaffModel user;
   const HomeScreen({super.key, required this.user});
+
+  final StaffModel user;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -23,14 +28,15 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _desktopSelectedIndex = 0;
+  final ShelterService _shelterService = ShelterService();
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
+  String _searchQuery = '';
+  String? _statusFilter;
 
   Future<void> _deleteShelter(BuildContext context, Shelter shelter) async {
     try {
-      // 실제 앱에서는 Cloud Functions를 이용해 하위 컬렉션을 삭제해야 합니다.
-      await FirebaseFirestore.instance
-          .collection('shelters')
-          .doc(shelter.id)
-          .delete();
+      await _shelterService.deleteShelterWithAnimals(shelter);
 
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -52,6 +58,72 @@ class _HomeScreenState extends State<HomeScreen> {
             (Route<dynamic> route) => false,
       );
     }
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    final String trimmedValue = value.trim();
+    _searchDebounce?.cancel();
+    if (trimmedValue == _searchQuery) {
+      return;
+    }
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      setState(() {
+        _searchQuery = trimmedValue;
+      });
+    });
+  }
+
+  void _clearSearch() {
+    if (_searchQuery.isEmpty) {
+      return;
+    }
+    _searchDebounce?.cancel();
+    if (!mounted) {
+      return;
+    }
+    _searchController.clear();
+    setState(() {
+      _searchQuery = '';
+    });
+  }
+
+  void _onStatusFilterChanged(String? value) {
+    final String? normalizedValue =
+    (value == null || value == '전체') ? null : value;
+    if (_statusFilter == normalizedValue) {
+      return;
+    }
+    setState(() {
+      _statusFilter = normalizedValue;
+    });
+  }
+
+  void _resetFilters() {
+    final bool hadSearch = _searchQuery.isNotEmpty;
+    final bool hadStatus = _statusFilter != null;
+    if (!hadSearch && !hadStatus) {
+      return;
+    }
+    _searchDebounce?.cancel();
+    if (hadSearch) {
+      _searchController.clear();
+    }
+    setState(() {
+      if (hadSearch) {
+        _searchQuery = '';
+      }
+      if (hadStatus) {
+        _statusFilter = null;
+      }
+    });
   }
 
   @override
@@ -193,84 +265,234 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // --- 수정된 대시보드 콘텐츠 ---
   Widget _buildDashboardContent() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const DashboardSummaryCard(),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(24.0, 16.0, 16.0, 8.0),
-          child: Text(
-            '보호소 목록',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0.0),
+          child: DashboardSummaryCard(),
         ),
+        const SizedBox(height: 12),
         Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('shelters')
-                .orderBy('createdAt', descending: true)
-                .snapshots(),
+          child: StreamBuilder<ShelterListState>(
+            stream: _shelterService.watchShelters(
+              searchQuery: _searchQuery,
+              statusFilter: _statusFilter,
+            ),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+              final bool isInitialLoading =
+                  snapshot.connectionState == ConnectionState.waiting &&
+                      !snapshot.hasData;
+              final ShelterListState state =
+                  snapshot.data ?? const ShelterListState.empty();
+              final List<String> statuses = state.availableStatuses;
+
+              String dropdownValue = _statusFilter ?? '전체';
+              if (!statuses.contains(dropdownValue)) {
+                dropdownValue = '전체';
+                if (_statusFilter != null) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) return;
+                    setState(() {
+                      _statusFilter = null;
+                    });
+                  });
+                }
               }
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const Center(
-                  child: Text('아직 운영중인 보호소가 없습니다.'),
+
+              final bool filtersActive =
+                  _searchQuery.isNotEmpty || _statusFilter != null;
+              final bool showFilteredChip =
+                  state.isFiltered || filtersActive;
+
+              Widget listContent;
+              if (snapshot.hasError) {
+                listContent = Center(
+                  child: Text(
+                    '데이터를 불러오는 중 오류가 발생했습니다: ${snapshot.error}',
+                  ),
+                );
+              } else if (isInitialLoading) {
+                listContent = const Center(child: CircularProgressIndicator());
+              } else if (!state.hasShelters) {
+                listContent = Center(
+                  child: Text(
+                    filtersActive
+                        ? '선택한 조건에 맞는 보호소가 없습니다.'
+                        : '등록된 보호소가 없습니다.',
+                  ),
+                );
+              } else {
+                listContent = ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 16.0),
+                  itemCount: state.shelters.length,
+                  itemBuilder: (context, index) {
+                    final shelter = state.shelters[index];
+                    return Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16.0),
+                      ),
+                      margin: const EdgeInsets.only(bottom: 16.0),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(16.0),
+                        leading: const CircleAvatar(
+                          backgroundColor: Color(0xFFFF7A00),
+                          child: Icon(Icons.home, color: Colors.white),
+                        ),
+                        title: Text(
+                          shelter.name,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('주소: ${shelter.address}'),
+                              Text('상세 주소: ${shelter.addressDetail}'),
+                              const SizedBox(height: 4),
+                              Text('상태: ${shelter.status}'),
+                              Text('관리자 UID: ${shelter.managerUid}'),
+                            ],
+                          ),
+                        ),
+                        trailing: (widget.user.role == 'SystemAdmin' ||
+                            widget.user.role == 'AreaManager')
+                            ? PopupMenuButton<String>(
+                          onSelected: (value) {
+                            if (value == 'view') {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      ShelterDetailScreen(
+                                        user: widget.user,
+                                        shelter: shelter,
+                                      ),
+                                ),
+                              );
+                            } else if (value == 'edit') {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => EditShelterScreen(
+                                    shelter: shelter,
+                                  ),
+                                ),
+                              );
+                            } else if (value == 'delete') {
+                              showDialog(
+                                context: context,
+                                builder: (context) =>
+                                    DeleteConfirmationDialog(
+                                      title: '보호소 삭제',
+                                      content:
+                                      '정말로 ${shelter.name} 보호소를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.',
+                                      onConfirm: () =>
+                                          _deleteShelter(context, shelter),
+                                    ),
+                              );
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'view',
+                              child: ListTile(
+                                leading:
+                                Icon(Icons.visibility_outlined),
+                                title: Text('상세 보기'),
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'edit',
+                              child: ListTile(
+                                leading: Icon(Icons.edit_outlined),
+                                title: Text('정보 수정'),
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: ListTile(
+                                leading: const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.redAccent,
+                                ),
+                                title: Text(
+                                  '보호소 삭제',
+                                  style: TextStyle(
+                                      color: Colors.red.shade700),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                            : const Icon(Icons.chevron_right),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => ShelterDetailScreen(
+                                user: widget.user,
+                                shelter: shelter,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
                 );
               }
-              final shelters = snapshot.data!.docs
-                  .map((doc) => Shelter.fromFirestore(doc))
-                  .toList();
-              return ListView.builder(
-                padding: const EdgeInsets.only(bottom: 80), // FAB에 가려지지 않도록
-                itemCount: shelters.length,
-                itemBuilder: (context, index) {
-                  final shelter = shelters[index];
-                  return Card(
-                    child: ListTile(
-                      leading: Icon(
-                        shelter.status == '운영중'
-                            ? Icons.home_work_outlined
-                            : Icons.no_meeting_room_outlined,
-                        color: shelter.status == '운영중'
-                            ? Theme.of(context).primaryColor
-                            : const Color(0xFF8A8A8E),
-                        size: 32,
-                      ),
-                      title: Text(shelter.name,
-                          style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text(
-                        '${shelter.address} ${shelter.addressDetail}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: (widget.user.role == 'SystemAdmin' ||
-                          widget.user.role == 'AreaManager')
-                          ? IconButton(
-                        icon: const Icon(Icons.more_vert),
-                        tooltip: '관리 메뉴',
-                        onPressed: () {
-                          _showManagementMenu(context, shelter);
-                        },
-                      )
-                          : null,
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => ShelterDetailScreen(
-                                user: widget.user, shelter: shelter),
-                          ),
-                        );
-                      },
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding:
+                    const EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 12.0),
+                    child: ShelterFilterBar(
+                      searchController: _searchController,
+                      onSearchChanged: _onSearchChanged,
+                      onClearSearch: _clearSearch,
+                      statuses: statuses,
+                      selectedStatus: dropdownValue,
+                      onStatusChanged: _onStatusFilterChanged,
+                      filtersActive: filtersActive,
+                      onResetFilters: _resetFilters,
                     ),
-                  );
-                },
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24.0,
+                      vertical: 8.0,
+                    ),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        const Text(
+                          '보호소 목록',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Chip(
+                          label: Text('총 ${state.totalCount}곳'),
+                        ),
+                        if (showFilteredChip)
+                          Chip(
+                            backgroundColor: const Color(0xFFFFF3E0),
+                            label: Text('필터 결과 ${state.filteredCount}곳'),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Expanded(child: listContent),
+                ],
               );
             },
           ),
@@ -278,49 +500,13 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
     );
   }
-
-  // --- 수정/삭제 메뉴를 보여주는 BottomSheet ---
-  void _showManagementMenu(BuildContext context, Shelter shelter) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder( // 모서리 둥글게
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) {
-        return Wrap(
-          children: <Widget>[
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('보호소 정보 수정'),
-              onTap: () {
-                Navigator.of(context).pop(); // BottomSheet 닫기
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => EditShelterScreen(shelter: shelter),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.delete_outline, color: Colors.red.shade700),
-              title: Text('보호소 삭제', style: TextStyle(color: Colors.red.shade700)),
-              onTap: () {
-                Navigator.of(context).pop(); // BottomSheet 닫기
-                showDialog(
-                  context: context,
-                  builder: (context) => DeleteConfirmationDialog(
-                    title: '보호소 삭제',
-                    content:
-                    '정말로 ${shelter.name} 보호소를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.',
-                    onConfirm: () => _deleteShelter(context, shelter),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
-        );
-      },
-    );
-  }
 }
+
+
+
+
+
+
+
+
+
