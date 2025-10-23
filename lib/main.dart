@@ -37,10 +37,11 @@ class MyApp extends StatelessWidget {
             borderSide: const BorderSide(color: Color(0xFFFF7A00)),
           ),
           labelStyle: const TextStyle(color: Color(0xFF8A8A8E)),
-          prefixIconColor: WidgetStateColor.resolveWith((states) =>
-          states.contains(WidgetState.focused)
-              ? const Color(0xFFFF7A00)
-              : const Color(0xFF8A8A8E)),
+          prefixIconColor: WidgetStateColor.resolveWith(
+                (states) => states.contains(WidgetState.focused)
+                ? const Color(0xFFFF7A00)
+                : const Color(0xFF8A8A8E),
+          ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
@@ -56,12 +57,11 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-        // --- 수정된 카드 테마 ---
         cardTheme: CardThemeData(
-          elevation: 0, // 그림자 제거
+          elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Color(0xFFE5E5E5)), // 얇은 테두리 추가
+            side: const BorderSide(color: Color(0xFFE5E5E5)),
           ),
           margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
         ),
@@ -70,3 +70,4 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
