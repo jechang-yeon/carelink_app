@@ -128,11 +128,7 @@ class _SummaryContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final TextTheme textTheme = theme.textTheme;
     final String titleText = title.trim();
-    final String? descriptionText = description?.trim();
-    final String? descriptionContent =
-    (descriptionText != null && descriptionText.isNotEmpty)
-        ? descriptionText
-        : null;
+    final String? descriptionContent = _normalizeText(description);
     final Color descriptionColor = theme.colorScheme.onSurfaceVariant
         .withValues(alpha: theme.brightness == Brightness.dark ? 0.85 : 0.7);
     final TextStyle? descriptionStyle = descriptionContent != null
@@ -140,7 +136,6 @@ class _SummaryContent extends StatelessWidget {
       color: descriptionColor,
     )
         : null;
-    final String? resolvedDescription = descriptionContent;
 
     final int statusCount = shelterState.availableStatuses
         .where((String status) => status != '전체')
@@ -189,15 +184,10 @@ class _SummaryContent extends StatelessWidget {
       ),
     ];
 
-    final String? emptyMessageText = emptyMessage?.trim();
-    final String? emptyMessageContent =
-    (emptyMessageText != null && emptyMessageText.isNotEmpty)
-        ? emptyMessageText
-        : null;
     final String? resolvedEmptyMessage = (!isLoading &&
         shelterState.totalCount == 0 &&
         error == null)
-        ? emptyMessageContent
+        ? _normalizeText(emptyMessage)
         : null;
 
     return Column(
@@ -207,10 +197,10 @@ class _SummaryContent extends StatelessWidget {
           titleText,
           style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
-        if (resolvedDescription != null && descriptionStyle != null) ...[
+        if (descriptionContent != null && descriptionStyle != null) ...[
           const SizedBox(height: 4),
           Text(
-            resolvedDescription,
+            descriptionContent,
             style: descriptionStyle,
           ),
         ],
@@ -449,6 +439,20 @@ class _MetricData {
   final String value;
   final Color? iconColor;
 }
+
+String? _normalizeText(String? value) {
+  if (value == null) {
+    return null;
+  }
+
+  final String trimmed = value.trim();
+  if (trimmed.isEmpty) {
+    return null;
+  }
+
+  return trimmed;
+}
+
 
 
 
