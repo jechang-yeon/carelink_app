@@ -8,14 +8,29 @@ import 'package:intl/intl.dart';
 class DashboardSummaryCard extends StatelessWidget {
   DashboardSummaryCard({
     super.key,
+    this.padding = const EdgeInsets.all(24.0),
+    this.title = '운영 현황 요약',
+    this.description = '등록된 보호소와 보호 동물 현황을 한눈에 살펴보세요.',
+    this.emptyMessage = '아직 등록된 보호소가 없습니다. 새로운 보호소를 추가해보세요.',
+    this.metricTileMinWidth = 220,
+    this.maxColumns = 3,
     ShelterService? shelterService,
     AnimalStatisticsService? animalStatisticsService,
-  })  : _shelterService = shelterService ?? ShelterService(),
+  })  : assert(metricTileMinWidth > 0, 'metricTileMinWidth는 0보다 커야 합니다.'),
+        assert(maxColumns > 0, 'maxColumns는 0보다 커야 합니다.'),
+        assert(title.trim().isNotEmpty, 'title은 비어 있을 수 없습니다.'),
+        _shelterService = shelterService ?? ShelterService(),
         _animalStatisticsService =
             animalStatisticsService ?? AnimalStatisticsService();
 
   final ShelterService _shelterService;
   final AnimalStatisticsService _animalStatisticsService;
+  final EdgeInsetsGeometry padding;
+  final String title;
+  final String? description;
+  final String? emptyMessage;
+  final double metricTileMinWidth;
+  final int maxColumns;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +42,7 @@ class DashboardSummaryCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16.0),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: padding,
         child: StreamBuilder<ShelterListState>(
           stream: _shelterService.watchShelters(),
           builder: (
@@ -67,6 +82,11 @@ class DashboardSummaryCard extends StatelessWidget {
                   statistics: statistics,
                   error: hasError ? error : null,
                   canShowMetrics: !hasError || hasAnyData,
+                  title: title,
+                  description: description,
+                  emptyMessage: emptyMessage,
+                  metricTileMinWidth: metricTileMinWidth,
+                  maxColumns: maxColumns,
                 );
               },
             );
@@ -84,7 +104,12 @@ class _SummaryContent extends StatelessWidget {
     required this.shelterState,
     required this.statistics,
     required this.canShowMetrics,
+    required this.title,
+    required this.metricTileMinWidth,
+    required this.maxColumns,
     this.error,
+    this.description,
+    this.emptyMessage,
   });
 
   final ThemeData theme;
@@ -93,15 +118,29 @@ class _SummaryContent extends StatelessWidget {
   final AnimalStatistics statistics;
   final bool canShowMetrics;
   final Object? error;
+  final String title;
+  final String? description;
+  final String? emptyMessage;
+  final double metricTileMinWidth;
+  final int maxColumns;
 
   @override
   Widget build(BuildContext context) {
     final TextTheme textTheme = theme.textTheme;
+    final String titleText = title.trim();
+    final String? descriptionText = description?.trim();
+    final String? descriptionContent =
+    (descriptionText != null && descriptionText.isNotEmpty)
+        ? descriptionText
+        : null;
     final Color descriptionColor = theme.colorScheme.onSurfaceVariant
         .withValues(alpha: theme.brightness == Brightness.dark ? 0.85 : 0.7);
-    final TextStyle? descriptionStyle = textTheme.bodyMedium?.copyWith(
+    final TextStyle? descriptionStyle = descriptionContent != null
+        ? textTheme.bodyMedium?.copyWith(
       color: descriptionColor,
-    );
+    )
+        : null;
+    final String? resolvedDescription = descriptionContent;
 
     final int statusCount = shelterState.availableStatuses
         .where((String status) => status != '전체')
@@ -150,21 +189,31 @@ class _SummaryContent extends StatelessWidget {
       ),
     ];
 
-    final bool showEmptyMessage =
-        !isLoading && shelterState.totalCount == 0 && error == null;
+    final String? emptyMessageText = emptyMessage?.trim();
+    final String? emptyMessageContent =
+    (emptyMessageText != null && emptyMessageText.isNotEmpty)
+        ? emptyMessageText
+        : null;
+    final String? resolvedEmptyMessage = (!isLoading &&
+        shelterState.totalCount == 0 &&
+        error == null)
+        ? emptyMessageContent
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '운영 현황 요약',
+          titleText,
           style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 4),
-        Text(
-          '등록된 보호소와 보호 동물 현황을 한눈에 살펴보세요.',
-          style: descriptionStyle,
-        ),
+        if (resolvedDescription != null && descriptionStyle != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            resolvedDescription,
+            style: descriptionStyle,
+          ),
+        ],
         const SizedBox(height: 24),
         if (isLoading) ...[
           const LinearProgressIndicator(),
@@ -177,23 +226,33 @@ class _SummaryContent extends StatelessWidget {
           ),
           const SizedBox(height: 24),
         ],
-        if (showEmptyMessage) ...[
+        if (resolvedEmptyMessage != null) ...[
           _SummaryEmptyState(
-            message: '아직 등록된 보호소가 없습니다. 새로운 보호소를 추가해보세요.',
+            message: resolvedEmptyMessage,
           ),
           if (canShowMetrics) const SizedBox(height: 24),
         ],
         if (canShowMetrics)
-          _MetricsGrid(metrics: metrics),
+          _MetricsGrid(
+            metrics: metrics,
+            minTileWidth: metricTileMinWidth,
+            maxColumns: maxColumns,
+          ),
       ],
     );
   }
 }
 
 class _MetricsGrid extends StatelessWidget {
-  const _MetricsGrid({required this.metrics});
+  const _MetricsGrid({
+    required this.metrics,
+    required this.minTileWidth,
+    required this.maxColumns,
+  });
 
   final List<_MetricData> metrics;
+  final double minTileWidth;
+  final int maxColumns;
 
   @override
   Widget build(BuildContext context) {
@@ -204,11 +263,11 @@ class _MetricsGrid extends StatelessWidget {
           availableWidth = MediaQuery.of(context).size.width;
         }
 
-        int columns = availableWidth ~/ 220;
+        int columns = availableWidth ~/ minTileWidth;
         if (columns < 1) {
           columns = 1;
-        } else if (columns > 3) {
-          columns = 3;
+        } else if (columns > maxColumns) {
+          columns = maxColumns;
         }
 
         final double spacing = 16.0;
@@ -390,4 +449,6 @@ class _MetricData {
   final String value;
   final Color? iconColor;
 }
+
+
 
