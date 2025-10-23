@@ -19,6 +19,7 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
   late TextEditingController _nameController;
   late TextEditingController _addressController;
   late TextEditingController _addressDetailController;
+  late TextEditingController _managerContactController;
   late String _status;
   bool _isLoading = false;
 
@@ -37,6 +38,8 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
     _addressController = TextEditingController(text: widget.shelter.address);
     _addressDetailController =
         TextEditingController(text: widget.shelter.addressDetail);
+    _managerContactController =
+        TextEditingController(text: widget.shelter.managerContact);
     _status = widget.shelter.status;
     _latitude = widget.shelter.latitude;
     _longitude = widget.shelter.longitude;
@@ -62,6 +65,7 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
     _nameController.dispose();
     _addressController.dispose();
     _addressDetailController.dispose();
+    _managerContactController.dispose();
     super.dispose();
   }
 
@@ -92,6 +96,7 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
           'longitude': _longitude,
           'status': _status,
           'managerUid': _selectedManagerUid ?? '',
+          'managerContact': _managerContactController.text.trim(),
           'staffUids': _selectedStaffUids,
         });
 
@@ -226,6 +231,16 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
                         onChanged: (value) {
                           _status = value!;
                         },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _managerContactController,
+                        keyboardType: TextInputType.phone,
+                        decoration: const InputDecoration(
+                          labelText: '관리자 연락처',
+                          hintText: '예: 010-1234-5678',
+                          prefixIcon: Icon(Icons.phone_outlined),
+                        ),
                       ),
                     ],
                   ),

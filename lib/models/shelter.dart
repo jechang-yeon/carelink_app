@@ -9,6 +9,7 @@ class Shelter {
   final double? longitude;     // 경도
   final String status;
   final String managerUid;
+  final String managerContact;
   final List<String> staffUids;
   final Timestamp createdAt;
 
@@ -21,6 +22,7 @@ class Shelter {
     this.longitude,
     required this.status,
     required this.managerUid,
+    this.managerContact = '',
     required this.staffUids,
     required this.createdAt,
   });
@@ -36,6 +38,7 @@ class Shelter {
       longitude: (data['longitude'] as num?)?.toDouble(),
       status: data['status'] ?? '운영중',
       managerUid: data['managerUid'] ?? '',
+      managerContact: data['managerContact'] ?? '',
       staffUids: List<String>.from(data['staffUids'] ?? []),
       createdAt: data['createdAt'] ?? Timestamp.now(),
     );

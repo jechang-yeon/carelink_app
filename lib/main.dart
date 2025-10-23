@@ -42,8 +42,8 @@ class MyApp extends StatelessWidget {
             vertical: 14,
           ),
           labelStyle: const TextStyle(color: Color(0xFF8A8A8E)),
-          prefixIconColor: MaterialStateColor.resolveWith(
-                (states) => states.contains(MaterialState.focused)
+          prefixIconColor: WidgetStateColor.resolveWith(
+                (states) => states.contains(WidgetState.focused)
                 ? const Color(0xFFFF7A00)
                 : const Color(0xFF8A8A8E),
           ),
@@ -75,6 +75,7 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
 
 
 

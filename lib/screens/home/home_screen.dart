@@ -67,14 +67,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Scaffold _buildMobileLayout(BuildContext context) {
     final Color titleColor = _resolveDashboardTitleColor(context);
+    final double baseIconSize = Theme.of(context).iconTheme.size ?? 24;
+    final double scaledIconSize = baseIconSize * 1.2;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         toolbarHeight: kToolbarHeight + 20.0,
-        iconTheme: IconThemeData(color: titleColor),
-        actionsIconTheme: IconThemeData(color: titleColor),
+        iconTheme: IconThemeData(color: titleColor, size: scaledIconSize),
+        actionsIconTheme:
+        IconThemeData(color: titleColor, size: scaledIconSize),
         title: Padding(
           padding: const EdgeInsets.only(top: 12.0),
           child: _buildDashboardAppBarTitle(context),
@@ -162,7 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
         theme.textTheme.titleLarge ??
         const TextStyle(fontSize: 20, fontWeight: FontWeight.w600);
     final double baseFontSize = baseStyle.fontSize ?? 20;
-    final double scaledFontSize = baseFontSize * 1.3;
+    final double scaledFontSize = baseFontSize * 1.5;
 
     return Text.rich(
       TextSpan(
@@ -265,22 +268,24 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: _buildProtectionOverviewSection(context),
         ),
-        const SizedBox(height: 24),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Divider(
-            color: Theme.of(context).colorScheme.outlineVariant,
-          ),
-        ),
         const SizedBox(height: 36),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: const Text(
-            '보호소 목록',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '보호소 목록',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Divider(
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 16),
@@ -318,6 +323,20 @@ class _HomeScreenState extends State<HomeScreen> {
                     final shelter = state.shelters[index];
                     final bool canManage = widget.user.role == 'SystemAdmin' ||
                         widget.user.role == 'AreaManager';
+                    final String addressLine = [
+                      shelter.address.trim(),
+                      shelter.addressDetail.trim(),
+                    ].where((segment) => segment.isNotEmpty).join(' ');
+                    final String managerUid = shelter.managerUid.trim();
+                    final String managerContact =
+                    shelter.managerContact.trim();
+                    final List<String> managerSegments = [
+                      if (managerUid.isNotEmpty) '관리자 UID $managerUid',
+                      if (managerContact.isNotEmpty)
+                        '연락처 $managerContact',
+                    ];
+                    final String managerLine = managerSegments.join(' · ');
+
                     return InkWell(
                       onTap: () {
                         Navigator.of(context).push(
@@ -350,12 +369,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  const SizedBox(height: 6),
-                                  Text('주소: ${shelter.address}'),
-                                  Text('상세 주소: ${shelter.addressDetail}'),
-                                  const SizedBox(height: 4),
-                                  Text('상태: ${shelter.status}'),
-                                  Text('관리자 UID: ${shelter.managerUid}'),
+                                  if (addressLine.isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    Text(addressLine),
+                                  ],
+                                  if (managerLine.isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    Text(managerLine),
+                                  ],
                                 ],
                               ),
                             ),
@@ -462,31 +483,33 @@ class _HomeScreenState extends State<HomeScreen> {
 
         String formatCount(int value) => formatter.format(value);
 
-        final Color defaultIconColor = theme.colorScheme.primary;
         final List<_ProtectionMetric> metrics = [
-          _ProtectionMetric.icon(
-            icon: Icons.pets,
+          _ProtectionMetric(
             semanticLabel: '총 보호 동물',
             value: formatCount(statistics.total),
-            iconColor: defaultIconColor,
+            iconBuilder: (double size, Color color) =>
+                Icon(Icons.pets, size: size, color: color),
           ),
-          _ProtectionMetric.icon(
-            icon: Icons.cruelty_free_outlined,
+          _ProtectionMetric(
             semanticLabel: '강아지',
             value: formatCount(statistics.dogs),
-            iconColor: defaultIconColor,
+            iconBuilder: (double size, Color color) =>
+                Icon(Icons.cruelty_free_outlined, size: size, color: color),
           ),
-          _ProtectionMetric.icon(
-            icon: Icons.pets_outlined,
+          _ProtectionMetric(
             semanticLabel: '고양이',
             value: formatCount(statistics.cats),
-            iconColor: defaultIconColor,
+            iconBuilder: (double size, Color color) =>
+                Icon(Icons.pets_outlined, size: size, color: color),
           ),
-          _ProtectionMetric.icon(
-            icon: Icons.emoji_nature_outlined,
+          _ProtectionMetric(
             semanticLabel: '기타 동물',
             value: formatCount(statistics.others),
-            iconColor: defaultIconColor,
+            iconBuilder: (double size, Color color) => Icon(
+              Icons.emoji_nature_outlined,
+              size: size,
+              color: color,
+            ),
           ),
         ];
 
@@ -499,7 +522,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
+            Divider(
+              color: theme.colorScheme.outlineVariant,
+            ),
+            const SizedBox(height: 16),
             if (isLoading) ...[
               const LinearProgressIndicator(),
               const SizedBox(height: 12),
@@ -514,18 +541,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-            Wrap(
-              spacing: 24,
-              runSpacing: 24,
-              children: metrics
-                  .map(
-                    (metric) => _ProtectionMetricTile(
-                  metric: metric,
-                  textTheme: textTheme,
-                  iconColor: theme.colorScheme.primary,
-                ),
-              )
-                  .toList(),
+            _ProtectionMetricsRow(
+              metrics: metrics,
+              textTheme: textTheme,
+              defaultIconColor: theme.colorScheme.primary,
             ),
           ],
         );
@@ -534,61 +553,81 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+class _ProtectionMetricsRow extends StatelessWidget {
+  const _ProtectionMetricsRow({
+    required this.metrics,
+    required this.textTheme,
+    required this.defaultIconColor,
+  });
+
+  final List<_ProtectionMetric> metrics;
+  final TextTheme textTheme;
+  final Color defaultIconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    const double minTileWidth = 120;
+    const double itemSpacing = 24;
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double maxWidth = constraints.maxWidth;
+        final double requiredWidth = metrics.length * minTileWidth +
+            (metrics.length - 1) * itemSpacing;
+
+        if (maxWidth.isFinite && maxWidth >= requiredWidth) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (int index = 0; index < metrics.length; index++) ...[
+                Expanded(
+                  child: _ProtectionMetricTile(
+                    metric: metrics[index],
+                    textTheme: textTheme,
+                    iconColor: defaultIconColor,
+                    expand: true,
+                    minWidth: minTileWidth,
+                  ),
+                ),
+                if (index != metrics.length - 1)
+                  const SizedBox(width: itemSpacing),
+              ],
+            ],
+          );
+        }
+
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (int index = 0; index < metrics.length; index++) ...[
+                _ProtectionMetricTile(
+                  metric: metrics[index],
+                  textTheme: textTheme,
+                  iconColor: defaultIconColor,
+                  minWidth: minTileWidth,
+                ),
+                if (index != metrics.length - 1)
+                  const SizedBox(width: itemSpacing),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _ProtectionMetric {
-  const _ProtectionMetric._({
+  const _ProtectionMetric({
     required this.value,
     required this.semanticLabel,
-    this.icon,
-    this.iconColor,
-    this.iconSize,
-    this.assetPath,
-    this.assetColor,
-    this.assetWidth,
-    this.assetHeight,
-  }) : assert(
-  icon != null || assetPath != null,
-  'icon 또는 assetPath 중 하나는 필수입니다.',
-  );
+    required this.iconBuilder,
+  });
 
-  const _ProtectionMetric.icon({
-    required IconData icon,
-    required String semanticLabel,
-    required String value,
-    Color? iconColor,
-    double? iconSize,
-  }) : this._(
-    icon: icon,
-    value: value,
-    semanticLabel: semanticLabel,
-    iconColor: iconColor,
-    iconSize: iconSize,
-  );
-
-  const _ProtectionMetric.asset({
-    required String assetPath,
-    required String semanticLabel,
-    required String value,
-    Color? assetColor,
-    double? assetWidth,
-    double? assetHeight,
-  }) : this._(
-    assetPath: assetPath,
-    value: value,
-    semanticLabel: semanticLabel,
-    assetColor: assetColor,
-    assetWidth: assetWidth,
-    assetHeight: assetHeight,
-  );
-
-  final IconData? icon;
-  final Color? iconColor;
-  final double? iconSize;
   final String value;
   final String semanticLabel;
-  final String? assetPath;
-  final Color? assetColor;
-  final double? assetWidth;
-  final double? assetHeight;
+  final Widget Function(double size, Color color) iconBuilder;
 }
 
 class _ProtectionMetricTile extends StatelessWidget {
@@ -596,55 +635,57 @@ class _ProtectionMetricTile extends StatelessWidget {
     required this.metric,
     required this.textTheme,
     required this.iconColor,
+    this.minWidth = 120,
+    this.expand = false,
   });
 
   final _ProtectionMetric metric;
   final TextTheme textTheme;
   final Color iconColor;
+  final double minWidth;
+  final bool expand;
 
   @override
   Widget build(BuildContext context) {
-    final double resolvedIconSize = metric.iconSize ?? 36;
-    final Widget iconWidget;
-    if (metric.assetPath != null) {
-      iconWidget = Image.asset(
-        metric.assetPath!,
-        width: metric.assetWidth ?? resolvedIconSize,
-        height: metric.assetHeight ?? resolvedIconSize,
-        color: metric.assetColor,
-      );
-    } else {
-      iconWidget = Icon(
-        metric.icon,
-        color: metric.iconColor ?? iconColor,
-        size: resolvedIconSize,
-      );
-    }
+    const double resolvedIconSize = 36;
+    final Widget iconWidget = metric.iconBuilder(resolvedIconSize, iconColor);
+
+    final Widget content = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        iconWidget,
+        const SizedBox(height: 8),
+        Text(
+          metric.value,
+          textAlign: TextAlign.center,
+          style: textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+
+    final Widget wrappedContent = expand
+        ? Align(
+      alignment: Alignment.center,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minWidth: minWidth),
+        child: content,
+      ),
+    )
+        : SizedBox(width: minWidth, child: content);
 
     return Semantics(
       label: metric.semanticLabel,
       value: metric.value,
-      child: SizedBox(
-        width: 120,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            iconWidget,
-            const SizedBox(height: 8),
-            Text(
-              metric.value,
-              textAlign: TextAlign.center,
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
+      child: wrappedContent,
     );
   }
 }
+
+
+
 
 
 

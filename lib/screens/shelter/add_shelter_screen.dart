@@ -55,6 +55,7 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
           'status': _status,
           'createdAt': Timestamp.now(),
           'managerUid': '',
+          'managerContact': '',
           'staffUids': [],
         });
 
@@ -201,7 +202,6 @@ class _AddShelterScreenState extends State<AddShelterScreen> {
           controller: detailController,
           decoration: const InputDecoration(
             labelText: '상세 주소',
-            hintText: '동, 호수 등',
             prefixIcon: Icon(Icons.location_on_outlined),
           ),
         ),
