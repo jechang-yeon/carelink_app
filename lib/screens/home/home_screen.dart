@@ -1,5 +1,4 @@
-import 'dart:async';
-
+import 'package:carelink_app/models/animal_statistics.dart';
 import 'package:carelink_app/models/shelter.dart';
 import 'package:carelink_app/models/shelter_list_state.dart';
 import 'package:carelink_app/models/staff_model.dart';
@@ -9,12 +8,13 @@ import 'package:carelink_app/screens/logs/activity_log_screen.dart';
 import 'package:carelink_app/screens/shelter/add_shelter_screen.dart';
 import 'package:carelink_app/screens/shelter/edit_shelter_screen.dart';
 import 'package:carelink_app/screens/shelter/shelter_detail_screen.dart';
+import 'package:carelink_app/services/animal_statistics_service.dart';
 import 'package:carelink_app/services/shelter_service.dart';
 import 'package:carelink_app/widgets/delete_confirmation_dialog.dart';
 import 'package:carelink_app/widgets/responsive_layout.dart';
-import 'package:carelink_app/widgets/shelter_filter_bar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, required this.user});
@@ -28,10 +28,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _desktopSelectedIndex = 0;
   final ShelterService _shelterService = ShelterService();
-  final TextEditingController _searchController = TextEditingController();
-  Timer? _searchDebounce;
-  String _searchQuery = '';
-  String? _statusFilter;
+  final AnimalStatisticsService _animalStatisticsService =
+  AnimalStatisticsService();
 
   Future<void> _deleteShelter(BuildContext context, Shelter shelter) async {
     try {
@@ -60,72 +58,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
-  void dispose() {
-    _searchDebounce?.cancel();
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _onSearchChanged(String value) {
-    final String trimmedValue = value.trim();
-    _searchDebounce?.cancel();
-    if (trimmedValue == _searchQuery) {
-      return;
-    }
-    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-      if (!mounted) return;
-      setState(() {
-        _searchQuery = trimmedValue;
-      });
-    });
-  }
-
-  void _clearSearch() {
-    if (_searchQuery.isEmpty) {
-      return;
-    }
-    _searchDebounce?.cancel();
-    if (!mounted) {
-      return;
-    }
-    _searchController.clear();
-    setState(() {
-      _searchQuery = '';
-    });
-  }
-
-  void _onStatusFilterChanged(String? value) {
-    final String? normalizedValue =
-    (value == null || value == '전체') ? null : value;
-    if (_statusFilter == normalizedValue) {
-      return;
-    }
-    setState(() {
-      _statusFilter = normalizedValue;
-    });
-  }
-
-  void _resetFilters() {
-    final bool hadSearch = _searchQuery.isNotEmpty;
-    final bool hadStatus = _statusFilter != null;
-    if (!hadSearch && !hadStatus) {
-      return;
-    }
-    _searchDebounce?.cancel();
-    if (hadSearch) {
-      _searchController.clear();
-    }
-    setState(() {
-      if (hadSearch) {
-        _searchQuery = '';
-      }
-      if (hadStatus) {
-        _statusFilter = null;
-      }
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     return ResponsiveLayout(
       mobileBody: _buildMobileLayout(context),
@@ -140,11 +72,11 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        toolbarHeight: kToolbarHeight + 12.0,
+        toolbarHeight: kToolbarHeight + 20.0,
         iconTheme: IconThemeData(color: titleColor),
         actionsIconTheme: IconThemeData(color: titleColor),
         title: Padding(
-          padding: const EdgeInsets.only(top: 8.0),
+          padding: const EdgeInsets.only(top: 12.0),
           child: _buildDashboardAppBarTitle(context),
         ),
         actions: _buildAppBarActions(context),
@@ -230,16 +162,17 @@ class _HomeScreenState extends State<HomeScreen> {
         theme.textTheme.titleLarge ??
         const TextStyle(fontSize: 20, fontWeight: FontWeight.w600);
     final double baseFontSize = baseStyle.fontSize ?? 20;
-    final double scaledFontSize = baseFontSize * 1.1;
+    final double scaledFontSize = baseFontSize * 1.3;
 
     return Text.rich(
       TextSpan(
         children: [
           TextSpan(
-            text: 'CareLink ',
+            text: 'CareLink\n',
             style: baseStyle.copyWith(
               fontSize: scaledFontSize,
               fontWeight: FontWeight.w300,
+              height: 1.1,
             ),
           ),
           TextSpan(
@@ -247,6 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
             style: baseStyle.copyWith(
               fontSize: scaledFontSize,
               fontWeight: FontWeight.w600,
+              height: 1.1,
             ),
           ),
         ],
@@ -263,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<Widget> _buildAppBarActions(BuildContext context) {
-    const EdgeInsets padding = EdgeInsets.only(top: 8.0);
+    const EdgeInsets padding = EdgeInsets.only(top: 12.0);
     return [
       if (widget.user.role == 'SystemAdmin')
         Padding(
@@ -326,43 +260,39 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 16),
+        const SizedBox(height: 40),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: _buildProtectionOverviewSection(context),
+        ),
+        const SizedBox(height: 24),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Divider(
             color: Theme.of(context).colorScheme.outlineVariant,
+          ),
+        ),
+        const SizedBox(height: 36),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: const Text(
+            '보호소 목록',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         const SizedBox(height: 16),
         Expanded(
           child: StreamBuilder<ShelterListState>(
-            stream: _shelterService.watchShelters(
-              searchQuery: _searchQuery,
-              statusFilter: _statusFilter,
-            ),
+            stream: _shelterService.watchShelters(),
             builder: (context, snapshot) {
               final bool isInitialLoading =
                   snapshot.connectionState == ConnectionState.waiting &&
                       !snapshot.hasData;
               final ShelterListState state =
                   snapshot.data ?? const ShelterListState.empty();
-              final List<String> statuses = state.availableStatuses;
-
-              String dropdownValue = _statusFilter ?? '전체';
-              if (!statuses.contains(dropdownValue)) {
-                dropdownValue = '전체';
-                if (_statusFilter != null) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (!mounted) return;
-                    setState(() {
-                      _statusFilter = null;
-                    });
-                  });
-                }
-              }
-
-              final bool filtersActive =
-                  _searchQuery.isNotEmpty || _statusFilter != null;
 
               Widget listContent;
               if (snapshot.hasError) {
@@ -374,186 +304,350 @@ class _HomeScreenState extends State<HomeScreen> {
               } else if (isInitialLoading) {
                 listContent = const Center(child: CircularProgressIndicator());
               } else if (!state.hasShelters) {
-                listContent = Center(
-                  child: Text(
-                    filtersActive
-                        ? '선택한 조건에 맞는 보호소가 없습니다.'
-                        : '등록된 보호소가 없습니다.',
-                  ),
+                listContent = const Center(
+                  child: Text('등록된 보호소가 없습니다.'),
                 );
               } else {
-                listContent = ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 16.0),
+                listContent = ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(24.0, 0.0, 24.0, 24.0),
                   itemCount: state.shelters.length,
+                  separatorBuilder: (context, index) => Divider(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
                   itemBuilder: (context, index) {
                     final shelter = state.shelters[index];
-                    return Card(
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16.0),
-                      ),
-                      margin: const EdgeInsets.only(bottom: 16.0),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(16.0),
-                        leading: const CircleAvatar(
-                          backgroundColor: Color(0xFFFF7A00),
-                          child: Icon(Icons.home, color: Colors.white),
-                        ),
-                        title: Text(
-                          shelter.name,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                    final bool canManage = widget.user.role == 'SystemAdmin' ||
+                        widget.user.role == 'AreaManager';
+                    return InkWell(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => ShelterDetailScreen(
+                              user: widget.user,
+                              shelter: shelter,
+                            ),
                           ),
-                        ),
-                        subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('주소: ${shelter.address}'),
-                              Text('상세 주소: ${shelter.addressDetail}'),
-                              const SizedBox(height: 4),
-                              Text('상태: ${shelter.status}'),
-                              Text('관리자 UID: ${shelter.managerUid}'),
-                            ],
-                          ),
-                        ),
-                        trailing: (widget.user.role == 'SystemAdmin' ||
-                            widget.user.role == 'AreaManager')
-                            ? PopupMenuButton<String>(
-                          onSelected: (value) {
-                            if (value == 'view') {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      ShelterDetailScreen(
-                                        user: widget.user,
-                                        shelter: shelter,
-                                      ),
-                                ),
-                              );
-                            } else if (value == 'edit') {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => EditShelterScreen(
-                                    shelter: shelter,
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const CircleAvatar(
+                              backgroundColor: Color(0xFFFF7A00),
+                              child: Icon(Icons.home, color: Colors.white),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    shelter.name,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text('주소: ${shelter.address}'),
+                                  Text('상세 주소: ${shelter.addressDetail}'),
+                                  const SizedBox(height: 4),
+                                  Text('상태: ${shelter.status}'),
+                                  Text('관리자 UID: ${shelter.managerUid}'),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            canManage
+                                ? PopupMenuButton<String>(
+                              onSelected: (value) {
+                                if (value == 'view') {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          ShelterDetailScreen(
+                                            user: widget.user,
+                                            shelter: shelter,
+                                          ),
+                                    ),
+                                  );
+                                } else if (value == 'edit') {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          EditShelterScreen(
+                                            shelter: shelter,
+                                          ),
+                                    ),
+                                  );
+                                } else if (value == 'delete') {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) =>
+                                        DeleteConfirmationDialog(
+                                          title: '보호소 삭제',
+                                          content:
+                                          '정말로 ${shelter.name} 보호소를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.',
+                                          onConfirm: () =>
+                                              _deleteShelter(
+                                                  context, shelter),
+                                        ),
+                                  );
+                                }
+                              },
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(
+                                  value: 'view',
+                                  child: ListTile(
+                                    leading:
+                                    Icon(Icons.visibility_outlined),
+                                    title: Text('상세 보기'),
                                   ),
                                 ),
-                              );
-                            } else if (value == 'delete') {
-                              showDialog(
-                                context: context,
-                                builder: (context) =>
-                                    DeleteConfirmationDialog(
-                                      title: '보호소 삭제',
-                                      content:
-                                      '정말로 ${shelter.name} 보호소를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.',
-                                      onConfirm: () =>
-                                          _deleteShelter(context, shelter),
+                                const PopupMenuItem(
+                                  value: 'edit',
+                                  child: ListTile(
+                                    leading: Icon(Icons.edit_outlined),
+                                    title: Text('정보 수정'),
+                                  ),
+                                ),
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: ListTile(
+                                    leading: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.redAccent,
                                     ),
-                              );
-                            }
-                          },
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(
-                              value: 'view',
-                              child: ListTile(
-                                leading:
-                                Icon(Icons.visibility_outlined),
-                                title: Text('상세 보기'),
-                              ),
-                            ),
-                            const PopupMenuItem(
-                              value: 'edit',
-                              child: ListTile(
-                                leading: Icon(Icons.edit_outlined),
-                                title: Text('정보 수정'),
-                              ),
-                            ),
-                            PopupMenuItem(
-                              value: 'delete',
-                              child: ListTile(
-                                leading: const Icon(
-                                  Icons.delete_outline,
-                                  color: Colors.redAccent,
+                                    title: Text(
+                                      '보호소 삭제',
+                                      style: TextStyle(
+                                          color: Colors.red.shade700),
+                                    ),
+                                  ),
                                 ),
-                                title: Text(
-                                  '보호소 삭제',
-                                  style: TextStyle(
-                                      color: Colors.red.shade700),
-                                ),
-                              ),
-                            ),
+                              ],
+                            )
+                                : const Icon(Icons.chevron_right),
                           ],
-                        )
-                            : const Icon(Icons.chevron_right),
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => ShelterDetailScreen(
-                                user: widget.user,
-                                shelter: shelter,
-                              ),
-                            ),
-                          );
-                        },
+                        ),
                       ),
                     );
                   },
                 );
               }
 
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding:
-                    const EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 12.0),
-                    child: ShelterFilterBar(
-                      searchController: _searchController,
-                      onSearchChanged: _onSearchChanged,
-                      onClearSearch: _clearSearch,
-                      statuses: statuses,
-                      selectedStatus: dropdownValue,
-                      onStatusChanged: _onStatusFilterChanged,
-                      filtersActive: filtersActive,
-                      onResetFilters: _resetFilters,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24.0,
-                      vertical: 4.0,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          '보호소 목록',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Divider(
-                          color:
-                          Theme.of(context).colorScheme.outlineVariant,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(child: listContent),
-                ],
-              );
+              return listContent;
             },
           ),
         ),
       ],
     );
   }
+
+  Widget _buildProtectionOverviewSection(BuildContext context) {
+    return StreamBuilder<AnimalStatistics>(
+      stream: _animalStatisticsService.watchAnimalStatistics(),
+      builder: (context, snapshot) {
+        final ThemeData theme = Theme.of(context);
+        final TextTheme textTheme = theme.textTheme;
+        final NumberFormat formatter = NumberFormat.decimalPattern('ko_KR');
+        final bool isLoading =
+            snapshot.connectionState == ConnectionState.waiting &&
+                !snapshot.hasData;
+        final bool hasError = snapshot.hasError;
+        final AnimalStatistics statistics =
+            snapshot.data ?? const AnimalStatistics.empty();
+
+        String formatCount(int value) => formatter.format(value);
+
+        final Color defaultIconColor = theme.colorScheme.primary;
+        final List<_ProtectionMetric> metrics = [
+          _ProtectionMetric.icon(
+            icon: Icons.pets,
+            semanticLabel: '총 보호 동물',
+            value: formatCount(statistics.total),
+            iconColor: defaultIconColor,
+          ),
+          _ProtectionMetric.icon(
+            icon: Icons.cruelty_free_outlined,
+            semanticLabel: '강아지',
+            value: formatCount(statistics.dogs),
+            iconColor: defaultIconColor,
+          ),
+          _ProtectionMetric.icon(
+            icon: Icons.pets_outlined,
+            semanticLabel: '고양이',
+            value: formatCount(statistics.cats),
+            iconColor: defaultIconColor,
+          ),
+          _ProtectionMetric.icon(
+            icon: Icons.emoji_nature_outlined,
+            semanticLabel: '기타 동물',
+            value: formatCount(statistics.others),
+            iconColor: defaultIconColor,
+          ),
+        ];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '보호 현황',
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (isLoading) ...[
+              const LinearProgressIndicator(),
+              const SizedBox(height: 12),
+            ],
+            if (hasError)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: Text(
+                  '보호 현황 정보를 불러오는 중 오류가 발생했습니다.',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+              ),
+            Wrap(
+              spacing: 24,
+              runSpacing: 24,
+              children: metrics
+                  .map(
+                    (metric) => _ProtectionMetricTile(
+                  metric: metric,
+                  textTheme: textTheme,
+                  iconColor: theme.colorScheme.primary,
+                ),
+              )
+                  .toList(),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
+
+class _ProtectionMetric {
+  const _ProtectionMetric._({
+    required this.value,
+    required this.semanticLabel,
+    this.icon,
+    this.iconColor,
+    this.iconSize,
+    this.assetPath,
+    this.assetColor,
+    this.assetWidth,
+    this.assetHeight,
+  }) : assert(
+  icon != null || assetPath != null,
+  'icon 또는 assetPath 중 하나는 필수입니다.',
+  );
+
+  const _ProtectionMetric.icon({
+    required IconData icon,
+    required String semanticLabel,
+    required String value,
+    Color? iconColor,
+    double? iconSize,
+  }) : this._(
+    icon: icon,
+    value: value,
+    semanticLabel: semanticLabel,
+    iconColor: iconColor,
+    iconSize: iconSize,
+  );
+
+  const _ProtectionMetric.asset({
+    required String assetPath,
+    required String semanticLabel,
+    required String value,
+    Color? assetColor,
+    double? assetWidth,
+    double? assetHeight,
+  }) : this._(
+    assetPath: assetPath,
+    value: value,
+    semanticLabel: semanticLabel,
+    assetColor: assetColor,
+    assetWidth: assetWidth,
+    assetHeight: assetHeight,
+  );
+
+  final IconData? icon;
+  final Color? iconColor;
+  final double? iconSize;
+  final String value;
+  final String semanticLabel;
+  final String? assetPath;
+  final Color? assetColor;
+  final double? assetWidth;
+  final double? assetHeight;
+}
+
+class _ProtectionMetricTile extends StatelessWidget {
+  const _ProtectionMetricTile({
+    required this.metric,
+    required this.textTheme,
+    required this.iconColor,
+  });
+
+  final _ProtectionMetric metric;
+  final TextTheme textTheme;
+  final Color iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final double resolvedIconSize = metric.iconSize ?? 36;
+    final Widget iconWidget;
+    if (metric.assetPath != null) {
+      iconWidget = Image.asset(
+        metric.assetPath!,
+        width: metric.assetWidth ?? resolvedIconSize,
+        height: metric.assetHeight ?? resolvedIconSize,
+        color: metric.assetColor,
+      );
+    } else {
+      iconWidget = Icon(
+        metric.icon,
+        color: metric.iconColor ?? iconColor,
+        size: resolvedIconSize,
+      );
+    }
+
+    return Semantics(
+      label: metric.semanticLabel,
+      value: metric.value,
+      child: SizedBox(
+        width: 120,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            iconWidget,
+            const SizedBox(height: 8),
+            Text(
+              metric.value,
+              textAlign: TextAlign.center,
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+
 
 
 
