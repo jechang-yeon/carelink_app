@@ -97,8 +97,10 @@ class _SummaryContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final TextTheme textTheme = theme.textTheme;
+    final Color descriptionColor = theme.colorScheme.onSurfaceVariant
+        .withValues(alpha: theme.brightness == Brightness.dark ? 0.85 : 0.7);
     final TextStyle? descriptionStyle = textTheme.bodyMedium?.copyWith(
-      color: textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+      color: descriptionColor,
     );
 
     final int statusCount = shelterState.availableStatuses
@@ -242,33 +244,44 @@ class _SummaryMetric extends StatelessWidget {
     final Color iconColor = data.iconColor ?? theme.colorScheme.primary;
     final Color backgroundColor = theme.colorScheme.surfaceContainerHighest
         .withValues(alpha: theme.brightness == Brightness.dark ? 0.35 : 0.6);
+    final Color valueColor = theme.colorScheme.onSurface;
+    final Color labelColor = theme.colorScheme.onSurfaceVariant
+        .withValues(alpha: theme.brightness == Brightness.dark ? 0.9 : 0.75);
 
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(12.0),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(data.icon, size: 28, color: iconColor),
-          const SizedBox(height: 12),
-          Text(
-            data.value,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.onSurface,
-            ),
+    return Semantics(
+      label: data.label,
+      value: data.value,
+      child: Tooltip(
+        message: '${data.label} • ${data.value}',
+        waitDuration: const Duration(milliseconds: 300),
+        child: Container(
+          padding: const EdgeInsets.all(16.0),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(12.0),
           ),
-          const SizedBox(height: 4),
-          Text(
-            data.label,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(data.icon, size: 28, color: iconColor),
+              const SizedBox(height: 12),
+              Text(
+                data.value,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: valueColor,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                data.label,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: labelColor,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -353,7 +366,9 @@ class _SummaryEmptyState extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: theme.textTheme.bodyMedium,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
             ),
           ),
         ],
@@ -375,3 +390,4 @@ class _MetricData {
   final String value;
   final Color? iconColor;
 }
+
