@@ -282,9 +282,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              Divider(
-                color: Theme.of(context).colorScheme.outlineVariant,
-              ),
+              _buildSectionDivider(context),
             ],
           ),
         ),
@@ -529,9 +527,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            Divider(
-              color: theme.colorScheme.outlineVariant,
-            ),
+            _buildSectionDivider(context),
             const SizedBox(height: 16),
             if (isLoading) ...[
               const LinearProgressIndicator(),
@@ -557,6 +553,14 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
+
+  Divider _buildSectionDivider(BuildContext context) {
+    return Divider(
+      height: 1,
+      thickness: 1,
+      color: Theme.of(context).colorScheme.outlineVariant,
+    );
+  }
 }
 
 class _ProtectionMetricsRow extends StatelessWidget {
@@ -572,8 +576,8 @@ class _ProtectionMetricsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const double minTileWidth = 120;
-    const double itemSpacing = 24;
+    const double minTileWidth = 84;
+    const double itemSpacing = 8;
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
@@ -641,7 +645,7 @@ class _ProtectionMetricTile extends StatelessWidget {
     required this.metric,
     required this.textTheme,
     required this.iconColor,
-    this.minWidth = 120,
+    this.minWidth = 84,
     this.expand = false,
   });
 
@@ -653,7 +657,7 @@ class _ProtectionMetricTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const double resolvedIconSize = 28;
+    const double resolvedIconSize = 67.2;
     final Widget iconWidget = SizedBox(
       width: resolvedIconSize,
       height: resolvedIconSize,
@@ -696,6 +700,8 @@ class _ProtectionMetricTile extends StatelessWidget {
     );
   }
 }
+
+
 
 
 
