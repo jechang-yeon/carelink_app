@@ -487,28 +487,33 @@ class _HomeScreenState extends State<HomeScreen> {
           _ProtectionMetric(
             semanticLabel: '총 보호 동물',
             value: formatCount(statistics.total),
-            iconBuilder: (double size, Color color) =>
-                Icon(Icons.pets, size: size, color: color),
+            iconBuilder: (double size, Color color) => Image.asset(
+              'assets/icons/total.png',
+              fit: BoxFit.contain,
+            ),
           ),
           _ProtectionMetric(
             semanticLabel: '강아지',
             value: formatCount(statistics.dogs),
-            iconBuilder: (double size, Color color) =>
-                Icon(Icons.cruelty_free_outlined, size: size, color: color),
+            iconBuilder: (double size, Color color) => Image.asset(
+              'assets/icons/dog.png',
+              fit: BoxFit.contain,
+            ),
           ),
           _ProtectionMetric(
             semanticLabel: '고양이',
             value: formatCount(statistics.cats),
-            iconBuilder: (double size, Color color) =>
-                Icon(Icons.pets_outlined, size: size, color: color),
+            iconBuilder: (double size, Color color) => Image.asset(
+              'assets/icons/cat.png',
+              fit: BoxFit.contain,
+            ),
           ),
           _ProtectionMetric(
             semanticLabel: '기타 동물',
             value: formatCount(statistics.others),
-            iconBuilder: (double size, Color color) => Icon(
-              Icons.emoji_nature_outlined,
-              size: size,
-              color: color,
+            iconBuilder: (double size, Color color) => Image.asset(
+              'assets/icons/other.png',
+              fit: BoxFit.contain,
             ),
           ),
         ];
@@ -516,10 +521,11 @@ class _HomeScreenState extends State<HomeScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               '보호 현황',
-              style: textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
@@ -647,8 +653,15 @@ class _ProtectionMetricTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const double resolvedIconSize = 36;
-    final Widget iconWidget = metric.iconBuilder(resolvedIconSize, iconColor);
+    const double resolvedIconSize = 28;
+    final Widget iconWidget = SizedBox(
+      width: resolvedIconSize,
+      height: resolvedIconSize,
+      child: FittedBox(
+        fit: BoxFit.contain,
+        child: metric.iconBuilder(resolvedIconSize, iconColor),
+      ),
+    );
 
     final Widget content = Column(
       mainAxisSize: MainAxisSize.min,
@@ -683,6 +696,8 @@ class _ProtectionMetricTile extends StatelessWidget {
     );
   }
 }
+
+
 
 
 
