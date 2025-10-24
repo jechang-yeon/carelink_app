@@ -15,7 +15,7 @@ class EditShelterScreen extends StatefulWidget {
 }
 
 class _EditShelterScreenState extends State<EditShelterScreen> {
-  final _formKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _addressController;
   late TextEditingController _addressDetailController;
@@ -27,9 +27,9 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
   double? _longitude;
 
   final UserService _userService = UserService();
-  List<StaffModel> _allStaff = [];
+  List<StaffModel> _allStaff = <StaffModel>[];
   String? _selectedManagerUid;
-  List<String> _selectedStaffUids = [];
+  List<String> _selectedStaffUids = <String>[];
 
   @override
   void initState() {
@@ -51,12 +51,16 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
   }
 
   Future<void> _loadAllStaff() async {
+    final List<StaffModel> staffList = await _userService.getAllStaff().first;
     if (!mounted) return;
-    final staffList = await _userService.getAllStaff().first;
-    if (mounted) {
-      setState(() {
-        _allStaff = staffList;
-      });
+    setState(() {
+      _allStaff = staffList;
+    });
+    if (_selectedManagerUid != null && mounted) {
+      final StaffModel? manager = _findStaffByUid(_selectedManagerUid!);
+      if (manager != null && manager.phoneNumber.isNotEmpty) {
+        _managerContactController.text = manager.phoneNumber;
+      }
     }
   }
 
@@ -75,12 +79,13 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
         _isLoading = true;
       });
 
-      if (_addressController.text.isNotEmpty && (_latitude == null || _longitude == null)) {
-        final coords =
+      if (_addressController.text.isNotEmpty &&
+          (_latitude == null || _longitude == null)) {
+        final Map<String, dynamic>? coords =
         await MapService.getCoordinatesFromAddress(_addressController.text);
         if (coords != null) {
-          _latitude = coords['latitude'];
-          _longitude = coords['longitude'];
+          _latitude = (coords['latitude'] as num?)?.toDouble();
+          _longitude = (coords['longitude'] as num?)?.toDouble();
         }
       }
 
@@ -222,14 +227,18 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
                           labelText: '운영 상태',
                           prefixIcon: Icon(Icons.power_settings_new_outlined),
                         ),
-                        items: ['운영중', '종료']
-                            .map((label) => DropdownMenuItem(
+                        items: <String>['운영중', '종료']
+                            .map((String label) => DropdownMenuItem<String>(
                           value: label,
                           child: Text(label),
                         ))
                             .toList(),
-                        onChanged: (value) {
-                          _status = value!;
+                        onChanged: (String? value) {
+                          if (value != null) {
+                            setState(() {
+                              _status = value;
+                            });
+                          }
                         },
                       ),
                       const SizedBox(height: 16),
@@ -258,7 +267,7 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
                               fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
-                        // --- 수정: value -> initialValue ---
+                        key: ValueKey<String?>(_selectedManagerUid),
                         initialValue: _selectedManagerUid,
                         hint: const Text('책임자를 선택하세요'),
                         decoration: const InputDecoration(
@@ -266,15 +275,23 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
                           prefixIcon: Icon(Icons.person_pin_outlined),
                         ),
                         items: _allStaff
-                            .map((staff) => DropdownMenuItem(
+                            .map((StaffModel staff) => DropdownMenuItem<String>(
                           value: staff.uid,
                           child: Text('${staff.name} (${staff.email})'),
                         ))
                             .toList(),
-                        onChanged: (value) {
+                        onChanged: (String? value) {
                           setState(() {
                             _selectedManagerUid = value;
                             _selectedStaffUids.remove(value);
+                            if (value != null) {
+                              final StaffModel? manager = _findStaffByUid(value);
+                              if (manager != null &&
+                                  manager.phoneNumber.isNotEmpty) {
+                                _managerContactController.text =
+                                    manager.phoneNumber;
+                              }
+                            }
                           });
                         },
                         validator: (value) =>
@@ -314,6 +331,15 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
         ),
       ),
     );
+  }
+
+  StaffModel? _findStaffByUid(String uid) {
+    for (final StaffModel staff in _allStaff) {
+      if (staff.uid == uid) {
+        return staff;
+      }
+    }
+    return null;
   }
 
   Widget _buildAddressInput(TextEditingController mainController,
@@ -371,3 +397,5 @@ class _EditShelterScreenState extends State<EditShelterScreen> {
     );
   }
 }
+
+

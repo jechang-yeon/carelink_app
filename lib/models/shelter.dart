@@ -12,6 +12,7 @@ class Shelter {
   final String managerContact;
   final List<String> staffUids;
   final Timestamp createdAt;
+  final Timestamp? openingDate;
 
   Shelter({
     required this.id,
@@ -25,6 +26,7 @@ class Shelter {
     this.managerContact = '',
     required this.staffUids,
     required this.createdAt,
+    this.openingDate,
   });
 
   factory Shelter.fromFirestore(DocumentSnapshot doc) {
@@ -36,11 +38,14 @@ class Shelter {
       addressDetail: data['addressDetail'] ?? '',
       latitude: (data['latitude'] as num?)?.toDouble(),
       longitude: (data['longitude'] as num?)?.toDouble(),
-      status: data['status'] ?? '운영중',
+      status: data['status'] ?? '준비 중',
       managerUid: data['managerUid'] ?? '',
       managerContact: data['managerContact'] ?? '',
       staffUids: List<String>.from(data['staffUids'] ?? []),
       createdAt: data['createdAt'] ?? Timestamp.now(),
+      openingDate: data['openingDate'],
     );
   }
 }
+
+
