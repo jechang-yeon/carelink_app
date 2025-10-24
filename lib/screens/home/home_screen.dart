@@ -87,7 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: _buildDashboardContent(),
       floatingActionButton: (widget.user.role == 'SystemAdmin' ||
           widget.user.role == 'AreaManager')
-          ? FloatingActionButton(
+          ? TextButton(
         onPressed: () {
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -95,8 +95,20 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           );
         },
-        tooltip: '신규 보호소 개설',
-        child: const Icon(Icons.add),
+        style: TextButton.styleFrom(
+          padding: EdgeInsets.zero,
+          minimumSize: const Size(56, 56),
+          foregroundColor: const Color(0xFFFF7A00),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        child: Text(
+          '+',
+          style: TextStyle(
+            fontSize: baseIconSize * 3,
+            fontWeight: FontWeight.w600,
+            height: 1,
+          ),
+        ),
       )
           : null,
     );
@@ -700,6 +712,8 @@ class _ProtectionMetricTile extends StatelessWidget {
     );
   }
 }
+
+
 
 
 
