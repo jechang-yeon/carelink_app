@@ -14,12 +14,23 @@ class StaffManagementScreen extends StatefulWidget {
 class _StaffManagementScreenState extends State<StaffManagementScreen> {
   final UserService _userService = UserService();
 
+  Divider _buildSectionDivider(BuildContext context) {
+    return Divider(
+      height: 1,
+      thickness: 1,
+      color: Theme.of(context).colorScheme.outlineVariant,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // 데스크탑 레이아웃에 내장될 때를 대비하여 Scaffold를 분리
     return Scaffold(
       appBar: AppBar(
         title: const Text('직원 관리'),
+        backgroundColor: Colors.transparent,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
       ),
       body: StreamBuilder<List<StaffModel>>(
         stream: _userService.getAllStaff(),
@@ -33,32 +44,75 @@ class _StaffManagementScreenState extends State<StaffManagementScreen> {
 
           final staffList = snapshot.data!;
 
-          return ListView.builder(
-            padding: const EdgeInsets.only(top: 8.0, bottom: 80.0),
+          return ListView.separated(
+            padding: const EdgeInsets.fromLTRB(24.0, 16.0, 24.0, 120.0),
             itemCount: staffList.length,
+            separatorBuilder: (context, index) => _buildSectionDivider(context),
             itemBuilder: (context, index) {
               final staff = staffList[index];
-              return Card(
-                child: ListTile(
-                  leading: Icon(
-                    Icons.person_outline,
-                    color: Theme.of(context).primaryColor,
-                    size: 32,
-                  ),
-                  title: Text(staff.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(staff.email),
-                  trailing: Text(staff.role,
-                      style: TextStyle(
-                          color: Theme.of(context).primaryColor,
-                          fontWeight: FontWeight.bold)),
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => EditStaffScreen(staff: staff),
+              return InkWell(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => EditStaffScreen(staff: staff),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(16.0),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor:
+                        Theme.of(context).colorScheme.primaryContainer,
+                        child: Icon(
+                          Icons.person_outline,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 28,
+                        ),
                       ),
-                    );
-                  },
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              staff.name,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              staff.email,
+                              style: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        staff.role,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Icon(
+                        Icons.chevron_right,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
