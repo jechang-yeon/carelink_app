@@ -4,11 +4,13 @@ import '../screens/search/address_search_screen.dart';
 class AddressInputField extends StatelessWidget {
   final TextEditingController mainAddressController;
   final TextEditingController detailAddressController;
+  final void Function(Map<String, dynamic> result)? onAddressSelected;
 
   const AddressInputField({
     super.key,
     required this.mainAddressController,
     required this.detailAddressController,
+    this.onAddressSelected,
   });
 
   @override
@@ -28,20 +30,26 @@ class AddressInputField extends StatelessWidget {
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) =>
-                value!.isEmpty ? '주소를 검색해주세요.' : null,
+                value == null || value.isEmpty ? '주소를 검색해주세요.' : null,
               ),
             ),
             const SizedBox(width: 8),
             ElevatedButton(
               onPressed: () async {
-                final result = await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const AddressSearchScreen(),
+                final Map<String, dynamic>? result =
+                await Navigator.of(context).push<Map<String, dynamic>?>(
+                  MaterialPageRoute<Map<String, dynamic>?>(
+                    builder: (BuildContext context) =>
+                    const AddressSearchScreen(),
                   ),
                 );
 
-                if (result != null && result is String) {
-                  mainAddressController.text = result;
+                if (result != null) {
+                  mainAddressController.text =
+                      result['address'] as String? ?? '';
+                  if (onAddressSelected != null) {
+                    onAddressSelected!(result);
+                  }
                 }
               },
               style: ElevatedButton.styleFrom(
